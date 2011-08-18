@@ -4,6 +4,9 @@ require 'rake/testtask'
 require 'rdoc/task'
 require 'rubygems/package_task'
 
+require 'bundler/setup'
+Bundler.require(:default)
+
 def common_test_settings(t)
   t.libs << 'lib'
   t.libs << 'test'
