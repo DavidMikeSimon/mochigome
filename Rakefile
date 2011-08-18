@@ -3,6 +3,8 @@ require 'rake'
 require 'rake/testtask'
 require 'rdoc/task'
 require 'rubygems/package_task'
+require 'rcov/rcovtask'
+require 'ruby-prof/task'
 
 require 'bundler/setup'
 Bundler.require(:default)
@@ -31,29 +33,18 @@ RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-begin
-  require 'rcov/rcovtask'
   
-  Rcov::RcovTask.new(:rcov) do |t|
-    common_test_settings(t)
-    t.pattern = 'test/unit/*_test.rb' # Don't care about coverage added by functional tests
-    t.rcov_opts << '-o coverage -x "/ruby/,/gems/,/test/,/migrate/"'
-  end
-rescue LoadError
-  # Rcov wasn't available
+Rcov::RcovTask.new(:rcov) do |t|
+  common_test_settings(t)
+  t.pattern = 'test/unit/*_test.rb' # Don't care about coverage added by functional tests
+  t.rcov_opts << '-o coverage -x "/ruby/,/gems/,/test/,/migrate/"'
 end
-
-begin
-  require 'ruby-prof/task'
   
-  RubyProf::ProfileTask.new(:profile) do |t|
-    common_test_settings(t)
-    t.output_dir = "#{File.dirname(__FILE__)}/profile"
-    t.printer = :call_tree
-    t.min_percent = 10
-  end
-rescue LoadError
-  # Ruby-prof wasn't available
+RubyProf::ProfileTask.new(:profile) do |t|
+  common_test_settings(t)
+  t.output_dir = "#{File.dirname(__FILE__)}/profile"
+  t.printer = :call_tree
+  t.min_percent = 10
 end
 
 require 'lib/version'
