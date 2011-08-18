@@ -1,6 +1,3 @@
-# Allow customization of the rails framework path
-RAILS_FRAMEWORK_ROOT = (ENV['RAILS_FRAMEWORK_ROOT'] || "#{File.dirname(__FILE__)}/../../../../../../vendor/rails") unless defined?(RAILS_FRAMEWORK_ROOT) 
-
 # Don't change this file!
 # Configure your app in config/environment.rb and config/environments/*.rb
 
@@ -9,6 +6,8 @@ RAILS_ROOT = "#{File.dirname(__FILE__)}/.." unless defined?(RAILS_ROOT)
 module Rails
   class << self
     def boot!
+      require 'rubygems'
+      Deprecate::skip = true
       unless booted?
         preinitialize
         pick_boot.run
@@ -24,7 +23,7 @@ module Rails
     end
 
     def vendor_rails?
-      File.exist?(RAILS_FRAMEWORK_ROOT)
+      File.exist?("#{RAILS_ROOT}/vendor/rails")
     end
 
     def preinitialize
@@ -45,7 +44,7 @@ module Rails
 
   class VendorBoot < Boot
     def load_initializer
-      require "#{RAILS_FRAMEWORK_ROOT}/railties/lib/initializer"
+      require "#{RAILS_ROOT}/vendor/rails/railties/lib/initializer"
       Rails::Initializer.run(:install_gem_spec_stubs)
       Rails::GemDependency.add_frozen_gem_path
     end
@@ -65,8 +64,12 @@ module Rails
         gem 'rails'
       end
     rescue Gem::LoadError => load_error
-      $stderr.puts %(Missing the Rails #{version} gem. Please `gem install -v=#{version} rails`, update your RAILS_GEM_VERSION setting in config/environment.rb for the Rails version you do have installed, or comment out RAILS_GEM_VERSION to use the latest version installed.)
-      exit 1
+      if load_error.message =~ /Could not find RubyGem rails/
+        STDERR.puts %(Missing the Rails #{version} gem. Please `gem install -v=#{version} rails`, update your RAILS_GEM_VERSION setting in config/environment.rb for the Rails version you do have installed, or comment out RAILS_GEM_VERSION to use the latest version installed.)
+        exit 1
+      else
+        raise
+      end
     end
 
     class << self
@@ -85,13 +88,13 @@ module Rails
       end
 
       def load_rubygems
+        min_version = '1.3.2'
         require 'rubygems'
-        min_version = '1.3.1'
         unless rubygems_version >= min_version
           $stderr.puts %Q(Rails requires RubyGems >= #{min_version} (you have #{rubygems_version}). Please `gem update --system` and try again.)
           exit 1
         end
- 
+
       rescue LoadError
         $stderr.puts %Q(Rails requires RubyGems >= #{min_version}. Please install RubyGems and try again: http://rubygems.rubyforge.org)
         exit 1
@@ -103,11 +106,23 @@ module Rails
 
       private
         def read_environment_rb
-          environment_rb = "#{RAILS_ROOT}/config/environment.rb"
-          environment_rb = "#{HELPER_RAILS_ROOT}/config/environment.rb" unless File.exists?(environment_rb)
-          File.read(environment_rb)
+          File.read("#{RAILS_ROOT}/config/environment.rb")
         end
     end
+  end
+end
+
+class Rails::Boot
+  def run
+    load_initializer
+
+    Rails::Initializer.class_eval do
+      def load_gems
+        @bundler_loaded ||= Bundler.require :default, Rails.env
+      end
+    end
+
+    Rails::Initializer.run(:set_load_path)
   end
 end
 
