@@ -1,0 +1,29 @@
+*NOTE*: This gem is a work in progress. It does work, but it's not especially convenient, yet.
+Better documentation and scripts will follow in time.
+
+*NOTE*: Currently the gem is only compatible with Rails 2.
+
+== Overview
+
+This gem allows users without Internet access to still use your app. It requires that your application can
+be thought of in the following way:
+
+Your site is broken down into a set of "groups" or "organizations". Each group has their own distinct set of
+records, which are editable by only a distinct set of a users. Besides that, there are global records that can
+only be edited by overall site administrators, though they can possibly be viewed by regular users.
+
+In order to make offline use of your app possible, Offroad will generate an installer bundle, which is an
+OS-specific executable that can install Ruby, Rails, and also a launcher which controls a local instance of
+WEBrick and manages imports and exports. The installer and launcher will be visually labelled everywhere with
+the name of the Rails app itself, making its function obvious to users. This launcher can generate up-mirror
+files, which are transported on a USB thumbdrive or some other medium to an online system, where they can be
+uploaded to the main app site. After having done an upload, the user is prompted to download a down-mirror
+file which contains any changes to the global records, and bring this back to the offline system, which
+completes the sneakernet round-trip.
+
+Rather than sending all data, only globally accessible records and updates to the app itself are transferred
+in the down-mirror (except for the first down-mirror, which also contains the initial set of records for the
+group). Furthermore, the offline version of the app is considered be the absolutely canonical source of that
+group's records; really, this is not a "sync", it's a "mirror". This means that no-one on the online site can
+make changes to an offline group's records, not even the administrator; this is enforced by Offroad at a
+low level.

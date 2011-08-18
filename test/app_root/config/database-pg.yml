@@ -1,0 +1,8 @@
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: ernie_test
+  pool: 5
+  username: david
+  password: foobar
+  min_messages: WARNING

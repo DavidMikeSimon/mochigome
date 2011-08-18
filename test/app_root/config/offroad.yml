@@ -1,0 +1,6 @@
+# Configuration for Offroad 
+# :online_url: The URL for the regular online version of the app 
+# :app_name: The name of the application, to be used in helpful messages in the generated mirror data files.
+
+:online_url: "http://example.com"
+:app_name: Example Application
