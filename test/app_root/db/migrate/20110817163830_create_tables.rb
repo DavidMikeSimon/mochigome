@@ -37,8 +37,11 @@ class CreateTables < ActiveRecord::Migration
       t.timestamps
     end
 
-    create_table :unused do |t|
+    # Used by ModelExtensionTest to create temporary models
+    create_table :fake do |t|
       t.timestamps
+      t.string :a
+      t.string :b
     end
   end
   
@@ -49,6 +52,6 @@ class CreateTables < ActiveRecord::Migration
     drop_table :owners
     drop_table :store_products
     drop_table :sales
-    drop_table :unused
+    drop_table :fake
   end
 end
