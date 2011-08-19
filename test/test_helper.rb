@@ -65,4 +65,9 @@ end
 
 class Test::Unit::TestCase
   include Test::Unit::Util::BacktraceFilter
+
+  def setup
+    ActiveRecord::Migration.verbose = false
+    ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations for the testing pseudo-app
+  end
 end

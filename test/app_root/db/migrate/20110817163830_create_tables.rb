@@ -36,6 +36,11 @@ class CreateTables < ActiveRecord::Migration
       t.integer :store_product_id
       t.timestamps
     end
+
+    create_table :unused do |t|
+      t.timestamps
+    end
+  end
   
   def self.down
     drop_table :products
@@ -44,5 +49,6 @@ class CreateTables < ActiveRecord::Migration
     drop_table :owners
     drop_table :store_products
     drop_table :sales
+    drop_table :unused
   end
 end
