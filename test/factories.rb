@@ -1,9 +1,9 @@
 require 'factory_girl'
+
 FactoryGirl.define do
   factory :product do
     name 'LG Optimus V'
     price 19.95
-    category
   end
 
   factory :category do

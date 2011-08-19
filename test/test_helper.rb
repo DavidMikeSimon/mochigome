@@ -63,12 +63,15 @@ module Test::Unit::Util::BacktraceFilter
   end
 end
 
+require 'factories'
+
 class Test::Unit::TestCase
+  include Factory::Syntax::Methods
   include Test::Unit::Util::BacktraceFilter
 
   def setup
     ActiveRecord::Migration.verbose = false
-    ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations for the testing pseudo-app
+    ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations for the test app
   end
 
   # Alias for should, scans better sometimes
