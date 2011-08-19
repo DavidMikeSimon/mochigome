@@ -73,10 +73,7 @@ module Ernie
         }
         when Hash then {
           :name => f.keys.first.to_s,
-          :value_func => (
-            f.values.first.is_a?(Proc) ?
-            f.values.first : lambda{|obj| obj.send(f.values.first.to_sym)}
-          )
+          :value_func => f.values.first.to_proc
         }
         else raise ModelSetupError.new "Invalid field: #{f.inspect}"
         end
