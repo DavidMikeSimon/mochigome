@@ -40,6 +40,14 @@ class TestDataSet < Test::Unit::TestCase
       assert_equal Product, @dataset.first.layers.first
     end
 
+    should "support looking up children by content or index" do
+      @dataset.concat [@category1, @category2]
+      @dataset[@category1] << @product_a
+      @dataset[@category2] << @product_c
+      assert_equal @product_a, @dataset[0].first.content
+      assert_equal @product_c, @dataset[1].first.content
+    end
+
     should "not accept items of the wrong type for the layer" do
       assert_raise Ernie::LayerMismatchError do
         @dataset << @product1
@@ -50,10 +58,44 @@ class TestDataSet < Test::Unit::TestCase
       end
     end
 
-    should "not accept layers unless they act as report focus" do
+    should "not search for an item of the wrong type on a layer" do
+      assert_raise Ernie::LayerMismatchError do
+        @dataset[@product_d] # Should be a Category, not a Product
+      end
+    end
+
+    should "prohibit searching for nonsense" do
+      assert_raise ArgumentError do
+        @dataset["foobar"]
+      end
+    end
+
+    should "only accept layers that act as report focus" do
       assert_raise Ernie::InvalidLayerError do
         Ernie::DataSet.new([Category, BoringDatum])
       end
+    end
+
+    should "return the new child DataSet(s) from a concatenation" do
+      child = @dataset << @category1
+      assert_equal @dataset[0], child
+
+      children = @dataset[0].concat [@product_a, @product_b]
+      assert_equal @dataset[0].to_a, children
+    end
+  end
+
+  context "a populated DataSet" do
+    setup do
+      @dataset = Ernie::DataSet.new([Category, Product])
+      @dataset.concat [@category1, @category2]
+      @dataset[@category1].concat @category1.products
+      @dataset[@category2].concat @category2.products
+    end
+
+    could "convert to an XML document" do
+      xml = @dataset.to_xml
+      assert_kind_of String, xml
     end
   end
 end

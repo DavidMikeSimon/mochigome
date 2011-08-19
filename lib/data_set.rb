@@ -25,10 +25,24 @@ module Ernie
         raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{item.class.name}"
       end
       @children << DataSet.new(layers.drop(1), item)
+      @children.last
     end
 
     def concat(items)
-      items.each {|i| self << i}
+      items.map {|i| self << i}
+    end
+
+    def [](term)
+      case term
+      when Integer then @children[term]
+      when ActiveRecord::Base
+        unless term.is_a?(layers.first)
+          raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{term.class.name}"
+        end
+        idx = @children.index{|c| c.content == term}
+        idx ? @children[idx] : nil
+      else raise ArgumentError.new("DataSet#[] requires an integer or a ActiveRecord")
+      end
     end
 
     def to_xml
@@ -36,6 +50,7 @@ module Ernie
       xml.tag! "dataSet" do
         append_xml_to(xml)
       end
+      xml
     end
 
     def to_ruport_table
@@ -48,15 +63,20 @@ module Ernie
 
     def append_xml_to(x)
       if content
-        x.tag!(content.ernie_tag_name.camelize(:lower), {:id => content.id}) do
-          content.ernie_field_data.each do |field|
+        focus = content.report_focus
+        x.tag!(focus.group_name.camelize(:lower), {:recId => content.id}) do
+          focus.data.each do |field|
             x.tag!(field[:name].camelize(:lower), field[:value])
           end
-          @children.each {|child| child.append_xml_to(x)}
+          append_children_to x
         end
       else
-        @children.each {|child| child.append_xml_to(x)}
+        append_children_to x
       end
+    end
+
+    def append_children_to(x)
+      @children.each {|child| child.send(:append_xml_to, x)}
     end
 
     def flat_column_names
