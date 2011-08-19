@@ -94,8 +94,16 @@ class TestDataSet < Test::Unit::TestCase
     end
 
     could "convert to an XML document" do
-      xml = @dataset.to_xml
-      assert_kind_of String, xml
+      doc = Nokogiri::XML(@dataset.to_xml.to_s)
+      category_nodes = doc.xpath('//dataSet/category')
+      assert_equal @category1.id.to_s, category_nodes[0]['recId']
+      assert_equal @category2.id.to_s, category_nodes[1]['recId']
+      assert_equal @category2.name, category_nodes[1].xpath('.//name').first.content
+      product_nodes = category_nodes[1].xpath('.//product')
+      assert_equal @product_c.id.to_s, product_nodes[0]['recId']
+      assert_equal @product_d.id.to_s, product_nodes[1]['recId']
+      assert_equal @product_c.name, product_nodes[0].xpath('.//name').first.content
+      assert_equal @product_c.price.to_s, product_nodes[0].xpath('.//price').first.content
     end
   end
 end
