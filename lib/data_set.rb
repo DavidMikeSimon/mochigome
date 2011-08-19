@@ -45,6 +45,10 @@ module Ernie
       end
     end
 
+    def children_content
+      @children.map(&:content)
+    end
+
     def to_xml
       xml = Builder::XmlMarkup.new
       xml.tag! "dataSet" do

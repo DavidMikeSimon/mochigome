@@ -93,6 +93,11 @@ class TestDataSet < Test::Unit::TestCase
       @dataset[@category2].concat @category2.products
     end
 
+    should "return an array of childrens' ActiveRecords with children_content" do
+      assert_equal [@category1, @category2], @dataset.children_content
+      assert_equal @category1.products, @dataset[@category1].children_content
+    end
+
     could "convert to an XML document" do
       doc = Nokogiri::XML(@dataset.to_xml.to_s)
       category_nodes = doc.xpath('//dataSet/category')
