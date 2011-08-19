@@ -16,6 +16,10 @@ module Ernie
         write_inheritable_attribute :ernie_focus_settings, settings
         send(:include, InstanceMethods)
       end
+
+      def acts_as_report_focus?
+        !!ernie_focus_settings
+      end
     end
 
     module InstanceMethods

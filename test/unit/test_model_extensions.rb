@@ -9,6 +9,14 @@ class TestModelExtensions < Test::Unit::TestCase
       end
     end
 
+    should "indicate if it acts_as_report_focus or not" do
+      assert_equal false, @model_class.acts_as_report_focus?
+      @model_class.class_eval do
+        acts_as_report_focus
+      end
+      assert @model_class.acts_as_report_focus?
+    end
+
     should "not call acts_as_report_focus more than once" do
       @model_class.class_eval do
         acts_as_report_focus

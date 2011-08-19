@@ -8,6 +8,7 @@ class TestDataSet < Test::Unit::TestCase
     @category2 = create(:category, :name => "Category 2")
     @product_c = create(:product, :name => "Product C", :category => @category2)
     @product_d = create(:product, :name => "Product D", :category => @category2)
+    @boring_datum = create(:boring_datum)
   end
 
   context "a new DataSet" do
@@ -49,7 +50,10 @@ class TestDataSet < Test::Unit::TestCase
       end
     end
 
-    should_eventually "not accept layers unless they act_as_report_focus" do
+    should "not accept layers unless they act as report focus" do
+      assert_raise Ernie::InvalidLayerError do
+        Ernie::DataSet.new([Category, BoringDatum])
+      end
     end
   end
 end

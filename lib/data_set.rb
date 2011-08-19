@@ -6,6 +6,14 @@ module Ernie
     attr_reader :layers
 
     def initialize(layers, content = nil)
+      layers.each do |cls|
+        unless cls.acts_as_report_focus?
+          raise Ernie::InvalidLayerError.new(
+            "Class #{cls.name} cannot be a DataSet layer since it does not act as a report focus"
+          )
+        end
+      end
+
       @layers = layers
       @content = content
       @children = []

@@ -1,5 +1,7 @@
 class StoreProduct < ActiveRecord::Base
-  # join model
+  # A many-to-many-join model
+  # Does not act as report focus
+
   belongs_to :store
   belongs_to :product
   has_many :sales

@@ -1,4 +1,8 @@
 class Product < ActiveRecord::Base
+  acts_as_report_focus do |f|
+    f.fields [:name, :price]
+  end
+
   belongs_to :category
   has_many :store_products
   has_many :stores, :through => :store_products

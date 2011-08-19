@@ -44,6 +44,12 @@ class CreateTables < ActiveRecord::Migration
       t.string :b
       t.integer :product_id
     end
+
+    # A model that has nothing to do with reports
+    create_table :boring_data do |t|
+      t.string :foo
+      t.string :bar
+    end
   end
   
   def self.down

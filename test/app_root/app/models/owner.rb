@@ -1,4 +1,8 @@
 class Owner < ActiveRecord::Base
+  acts_as_report_focus do |f|
+    f.fields [:name]
+  end
+
   has_many :stores
 
   def name(reverse = false)

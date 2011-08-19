@@ -31,4 +31,8 @@ FactoryGirl.define do
   factory :sale do
     store_product
   end
+
+  factory :boring_datum do
+    foo 'Bar'
+  end
 end
