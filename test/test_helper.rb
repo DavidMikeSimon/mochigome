@@ -82,6 +82,17 @@ class Test::Unit::TestCase
     context_could :should_eventually, verb, &block
   end
 
+  # Make it easier to have custom setups outside a context
+  def self.setup(&block)
+    @@setup_block = block
+    class_eval do
+      def setup
+        super
+        instance_eval &@@setup_block
+      end
+    end
+  end
+
   private
 
   def self.context_could(method, verb, &block)

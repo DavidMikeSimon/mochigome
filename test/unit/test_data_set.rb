@@ -1,16 +1,18 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
 class TestDataSet < Test::Unit::TestCase
-  context "a DataSet" do
+  setup do
+    @category1 = create(:category, :name => "Category 1")
+    @product_a = create(:product, :name => "Product A", :category => @category1)
+    @product_b = create(:product, :name => "Product B", :category => @category1)
+    @category2 = create(:category, :name => "Category 2")
+    @product_c = create(:product, :name => "Product C", :category => @category2)
+    @product_d = create(:product, :name => "Product D", :category => @category2)
+  end
+
+  context "a new DataSet" do
     setup do
       @dataset = Ernie::DataSet.new([Category, Product])
-
-      @category1 = create(:category, :name => "Category 1")
-      @product_a = create(:product, :name => "Product A", :category => @category1)
-      @product_b = create(:product, :name => "Product B", :category => @category1)
-      @category2 = create(:category, :name => "Category 2")
-      @product_c = create(:product, :name => "Product C", :category => @category2)
-      @product_d = create(:product, :name => "Product D", :category => @category2)
     end
 
     should "know what its layers are" do
@@ -45,6 +47,9 @@ class TestDataSet < Test::Unit::TestCase
       assert_raise Ernie::LayerMismatchError do
         @dataset.first << @category2
       end
+    end
+
+    should_eventually "not accept layers unless they act_as_report_focus" do
     end
   end
 end
