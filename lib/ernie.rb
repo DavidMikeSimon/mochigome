@@ -1,3 +1,4 @@
+require 'aggregator'
 require 'exceptions'
 require 'data_set'
 require 'model_extensions'
