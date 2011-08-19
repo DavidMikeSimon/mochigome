@@ -105,5 +105,14 @@ class TestDataSet < Test::Unit::TestCase
       assert_equal @product_c.name, product_nodes[0].xpath('.//name').first.content
       assert_equal @product_c.price.to_s, product_nodes[0].xpath('.//price').first.content
     end
+
+    could "convert to a Ruport table" do
+      table = @dataset.to_ruport_table
+      assert_equal ["Category::name", "Product::name", "Product::price"], table.column_names
+      assert_equal [@category1.name, @product_b.name, @product_b.price], table.data[1].to_a
+    end
+
+    could_eventually "convert to a Ruport grouping" do
+    end
   end
 end

@@ -62,8 +62,8 @@ gemspec = Gem::Specification.new do |s|
   s.require_path = 'lib'
   s.rubyforge_project = '[none]'
 
-  s.add_dependency('ruport', '1.6.3')
-  s.add_dependency('ruport-util', '0.14.0')
+  s.add_dependency('ruport')
+  s.add_dependency('ruport-util')
 end
 
 Gem::PackageTask.new(gemspec) do |pkg|

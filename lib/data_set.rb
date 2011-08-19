@@ -54,7 +54,7 @@ module Ernie
     end
 
     def to_ruport_table
-      table = Ruport::Data::Table.new(:column_names => @root_node.flat_column_names)
+      table = Ruport::Data::Table.new(:column_names => flat_column_names)
       append_rows_to(table)
       table
     end
@@ -81,21 +81,21 @@ module Ernie
 
     def flat_column_names
       if @content
-        prefix_tag = @content.ernie_tag_name
-        colnames = @content.class.ernie_field_list.map{|f| "#{prefix_tag}::#{f[:name]}"}
+        focus = @content.report_focus
+        colnames = focus.data.map{|f| "#{focus.group_name}::#{f[:name]}"}
       else
         colnames = []
       end
       if @children.size > 0
-        colnames += @children.first.flat_column_names
+        colnames += @children.first.send(:flat_column_names)
       end
       colnames
     end
 
     def append_rows_to(table, stack = [])
-      stack.push @content.ernie_field_data.map{|r| r[:value]} if @content
+      stack.push @content.report_focus.data.map{|r| r[:value]} if @content
       if @children.size > 0
-        @children.each {|child| child.append_rows_to(table, stack)}
+        @children.each {|child| child.send(:append_rows_to, table, stack)}
       else
         table << stack.flatten(1)
       end
