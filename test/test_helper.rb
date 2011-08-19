@@ -73,6 +73,15 @@ class Test::Unit::TestCase
 
   # Alias for should, scans better sometimes
   def self.could(verb, &block)
-    should("be able to #{verb}", &block)
+    context_could :should, verb, &block
+  end
+  def self.could_eventually(verb, &block)
+    context_could :should_eventually, verb, &block
+  end
+
+  private
+
+  def self.context_could(method, verb, &block)
+    Shoulda::Context.current_context.send(method, "be able to #{verb}", &block)
   end
 end
