@@ -70,4 +70,9 @@ class Test::Unit::TestCase
     ActiveRecord::Migration.verbose = false
     ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations for the testing pseudo-app
   end
+
+  # Alias for should, scans better sometimes
+  def self.could(verb, &block)
+    should("be able to #{verb}", &block)
+  end
 end
