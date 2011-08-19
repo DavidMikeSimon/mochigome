@@ -2,14 +2,18 @@ module Ernie
   module ModelExtensions
     def self.included(base)
       base.extend(ClassMethods)
+      base.write_inheritable_attribute :ernie_focus_settings, nil
+      base.class_inheritable_reader :ernie_focus_settings
     end
 
     module ClassMethods
       def acts_as_report_focus
-        settings = ReportFocusSettings.new
+        if self.try(:ernie_focus_settings).try(:orig_class) == self
+          raise Ernie::ModelSetupError.new("Already acts_as_report_focus for #{self.name}")
+        end
+        settings = ReportFocusSettings.new(self)
         yield settings if block_given?
         write_inheritable_attribute :ernie_focus_settings, settings
-        class_inheritable_reader :ernie_focus_settings
         send(:include, InstanceMethods)
       end
     end
@@ -42,8 +46,10 @@ module Ernie
 
   class ReportFocusSettings
     attr_reader :options
+    attr_reader :orig_class
 
-    def initialize
+    def initialize(orig_class)
+      @orig_class = orig_class
       @options = {}
       @options[:fields] = []
     end

@@ -8,6 +8,44 @@ class TestModelExtensions < Test::Unit::TestCase
         set_table_name :fake
       end
     end
+
+    should "not call acts_as_report_focus more than once" do
+      @model_class.class_eval do
+        acts_as_report_focus
+      end
+      assert_raises Ernie::ModelSetupError do
+        @model_class.class_eval do
+          acts_as_report_focus
+        end
+      end
+    end
+
+    should "inherit a parent's report focus settings" do
+      @model_class.class_eval do
+        acts_as_report_focus do |f|
+          f.group_name "Foobar"
+        end
+      end
+      @sub_class = Class.new(@model_class)
+      i = @sub_class.new
+      assert_equal "Foobar", i.report_focus.group_name
+    end
+
+    could "override a parent's report focus settings" do
+      @model_class.class_eval do
+        acts_as_report_focus do |f|
+          f.group_name "Foobar"
+        end
+      end
+      @sub_class = Class.new(@model_class)
+      @sub_class.class_eval do
+        acts_as_report_focus do |f|
+          f.group_name "Narfbork"
+        end
+      end
+      i = @sub_class.new
+      assert_equal "Narfbork", i.report_focus.group_name
+    end
     
     should "have its class name as the default group name" do
       SomeWeirdConstant = @model_class 

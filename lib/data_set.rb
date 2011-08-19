@@ -1,5 +1,3 @@
-# Module for creating and exporting strata-classed trees of ActiveRecords
-
 module Ernie
   class DataSet
     def initialize(dataset_name, &block)
