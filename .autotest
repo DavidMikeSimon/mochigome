@@ -1,7 +1,16 @@
 require 'redgreen/autotest'
 
 Autotest.add_hook :initialize do |at|
-  %w{coverage/ test/app_root/log/}.each do |e|
+  %w{.git Rakefile README.rdoc LICENSE coverage/ test/app_root/log/}.each do |e|
     at.add_exception(e)
+  end
+end
+
+class Autotest
+  def get_to_green
+    begin
+      rerun_all_tests
+      wait_for_changes unless all_good
+    end until all_good
   end
 end
