@@ -2,7 +2,7 @@ module Ernie
   class DataSet
     include Enumerable
 
-    attr_reader :content
+    attr_accessor :content
     attr_reader :layers
 
     def initialize(layers, content = nil)

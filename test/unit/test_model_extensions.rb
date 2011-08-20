@@ -189,5 +189,13 @@ class TestModelExtensions < Test::Unit::TestCase
         end
       end
     end
+
+    should "appear in Ernie's global model list if it acts_as_report_focus" do
+      assert !Ernie.reportFocusModels.include?(@model_class)
+      @model_class.class_eval do
+        acts_as_report_focus
+      end
+      assert Ernie.reportFocusModels.include?(@model_class)
+    end
   end
 end

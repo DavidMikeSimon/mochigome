@@ -1,4 +1,9 @@
 module Ernie
+  @reportFocusModels = []
+  def self.reportFocusModels
+    @reportFocusModels
+  end
+
   module ModelExtensions
     def self.included(base)
       base.extend(ClassMethods)
@@ -15,6 +20,7 @@ module Ernie
         yield settings if block_given?
         write_inheritable_attribute :ernie_focus_settings, settings
         send(:include, InstanceMethods)
+        Ernie::reportFocusModels << self
       end
 
       def acts_as_report_focus?

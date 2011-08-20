@@ -29,12 +29,11 @@ class TestAggregator < Test::Unit::TestCase
   end
 
   context "Aggregator" do
-    could "build a two-layer DataSet focused a record with a belongs_to association" do
+    could "build a two-layer DataSet focused on a record with a belongs_to association" do
       agg = Ernie::Aggregator.new([Category, Product])
-      agg.focus = @product_a
-      data_set = agg.run
-      assert_equal @category_a, data_set.content
-      assert_equal [@product_a], data_set.children_content
+      data_set = agg.focused_on(@product_a)
+      assert_equal [@category1], data_set.children_content
+      assert_equal [@product_a], data_set[@category1].children_content
     end
   end
 end
