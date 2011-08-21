@@ -12,7 +12,7 @@ Bundler.require(:default)
 def common_test_settings(t)
   t.libs << 'lib'
   t.libs << 'test'
-  t.pattern = 'test/**/test_*.rb'
+  t.pattern = 'test/**/*_test.rb'
   t.verbose = true
 end
 
@@ -35,7 +35,7 @@ end
 
 Rcov::RcovTask.new(:rcov) do |t|
   common_test_settings(t)
-  t.pattern = 'test/unit/test_*.rb' # Don't care about coverage added by functional tests
+  t.pattern = 'test/unit/*_test.rb' # Don't care about coverage added by functional tests
   t.rcov_opts << '-o coverage -x "/ruby/,/gems/,/test/,/migrate/"'
 end
   
