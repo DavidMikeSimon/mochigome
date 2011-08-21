@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
-class TestAggregator < Test::Unit::TestCase
-  setup do
+describe Ernie::Aggregator do
+  before do
     @category1 = create(:category, :name => "Category 1")
     @product_a = create(:product, :name => "Product A", :category => @category1)
     @product_b = create(:product, :name => "Product B", :category => @category1)
@@ -28,12 +28,18 @@ class TestAggregator < Test::Unit::TestCase
     @store_z.products << @product_d
   end
 
-  context "Aggregator" do
-    could "build a two-layer DataSet focused on a record with a belongs_to association" do
-      agg = Ernie::Aggregator.new([Category, Product])
-      data_set = agg.focused_on(@product_a)
-      assert_equal [@category1], data_set.children_content
-      assert_equal [@product_a], data_set[@category1].children_content
-    end
+  it "can build a one-layer DataSet" do
+    agg = Ernie::Aggregator.new([Product])
+    data_set = agg.focused_on(@product_a)
+    assert_equal [@product_a], data_set.children_content
+    assert_equal [], data_set[@product_a].children_content
+  end
+
+  it "can build a two-layer DataSet focused on a record with a belongs_to association" do
+    agg = Ernie::Aggregator.new([Category, Product])
+    data_set = agg.focused_on(@product_a)
+    assert_equal [@category1], data_set.children_content
+    assert_equal [@product_a], data_set[@category1].children_content
+    assert_equal [], data_set[@category1][@product_a].children_content
   end
 end

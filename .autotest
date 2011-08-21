@@ -1,5 +1,3 @@
-require 'redgreen/autotest'
-
 Autotest.add_hook :initialize do |at|
   %w{.git Rakefile README.rdoc LICENSE coverage/ test/app_root/log/}.each do |e|
     at.add_exception(e)

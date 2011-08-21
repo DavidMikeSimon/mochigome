@@ -33,7 +33,6 @@ RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-  
 Rcov::RcovTask.new(:rcov) do |t|
   common_test_settings(t)
   t.pattern = 'test/unit/test_*.rb' # Don't care about coverage added by functional tests

@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
-class TestDataSet < Test::Unit::TestCase
-  setup do
+describe Ernie::DataSet do
+  before do
     @category1 = create(:category, :name => "Category 1")
     @product_a = create(:product, :name => "Product A", :category => @category1)
     @product_b = create(:product, :name => "Product B", :category => @category1)
@@ -11,27 +11,27 @@ class TestDataSet < Test::Unit::TestCase
     @boring_datum = create(:boring_datum)
   end
 
-  context "a new DataSet" do
-    setup do
+  describe "when just created" do
+    before do
       @dataset = Ernie::DataSet.new([Category, Product])
     end
 
-    should "know what its layers are" do
+    it "knows what its layers are" do
       assert_equal [Category, Product], @dataset.layers
     end
 
-    should "be empty by default" do
+    it "is empty by default" do
       assert_equal 0, @dataset.size
     end
 
-    could "have items added to the top layer" do
+    it "can have items added to the top layer" do
       @dataset << @category1
       @dataset << @category2
       assert_equal 2, @dataset.size
       assert_equal @category1, @dataset.first.content
     end
 
-    could "have items added at multiple layers" do
+    it "can have items added at multiple layers" do
       @dataset << @category1
       @dataset.first.concat  @category1.products 
       assert_equal 1, @dataset.size
@@ -40,7 +40,7 @@ class TestDataSet < Test::Unit::TestCase
       assert_equal Product, @dataset.first.layers.first
     end
 
-    should "support looking up children by content or index" do
+    it "supports looking up children by content or index" do
       @dataset.concat [@category1, @category2]
       @dataset[@category1] << @product_a
       @dataset[@category2] << @product_c
@@ -48,35 +48,35 @@ class TestDataSet < Test::Unit::TestCase
       assert_equal @product_c, @dataset[1].first.content
     end
 
-    should "not accept items of the wrong type for the layer" do
-      assert_raise Ernie::LayerMismatchError do
+    it "doesn't accept items of the wrong type for the layer" do
+      assert_raises Ernie::LayerMismatchError do
         @dataset << @product1
       end
       @dataset << @category1
-      assert_raise Ernie::LayerMismatchError do
+      assert_raises Ernie::LayerMismatchError do
         @dataset.first << @category2
       end
     end
 
-    should "not search for an item of the wrong type on a layer" do
-      assert_raise Ernie::LayerMismatchError do
+    it "won't search for an item of the wrong type on a layer" do
+      assert_raises Ernie::LayerMismatchError do
         @dataset[@product_d] # Should be a Category, not a Product
       end
     end
 
-    should "prohibit searching for nonsense" do
-      assert_raise ArgumentError do
+    it "won't search for nonsense" do
+      assert_raises ArgumentError do
         @dataset["foobar"]
       end
     end
 
-    should "only accept layers that act as report focus" do
-      assert_raise Ernie::InvalidLayerError do
+    it "only accepts layers that act as report focus" do
+      assert_raises Ernie::InvalidLayerError do
         Ernie::DataSet.new([Category, BoringDatum])
       end
     end
 
-    should "return the new child DataSet(s) from a concatenation" do
+    it "returns the new child DataSet(s) from a concatenation" do
       child = @dataset << @category1
       assert_equal @dataset[0], child
 
@@ -85,20 +85,20 @@ class TestDataSet < Test::Unit::TestCase
     end
   end
 
-  context "a populated DataSet" do
-    setup do
+  describe "when populated" do
+    before do
       @dataset = Ernie::DataSet.new([Category, Product])
       @dataset.concat [@category1, @category2]
       @dataset[@category1].concat @category1.products
       @dataset[@category2].concat @category2.products
     end
 
-    should "return an array of childrens' ActiveRecords with children_content" do
+    it "returns an array of childrens' ActiveRecords with children_content" do
       assert_equal [@category1, @category2], @dataset.children_content
       assert_equal @category1.products, @dataset[@category1].children_content
     end
 
-    could "convert to an XML document" do
+    it "can convert to an XML document" do
       doc = Nokogiri::XML(@dataset.to_xml.to_s)
       category_nodes = doc.xpath('//dataSet/category')
       assert_equal @category1.id.to_s, category_nodes[0]['recId']
@@ -111,13 +111,14 @@ class TestDataSet < Test::Unit::TestCase
       assert_equal @product_c.price.to_s, product_nodes[0].xpath('.//price').first.content
     end
 
-    could "convert to a Ruport table" do
+    it "can convert to a Ruport table" do
       table = @dataset.to_ruport_table
       assert_equal ["Category::name", "Product::name", "Product::price"], table.column_names
       assert_equal [@category1.name, @product_b.name, @product_b.price], table.data[1].to_a
     end
 
-    could_eventually "convert to a Ruport grouping" do
+    it "can convert to a Ruport grouping" do
+      skip
     end
   end
 end

@@ -17,26 +17,18 @@ ensure
 end
 
 require 'rubygems'
-require 'test/unit/util/backtracefilter'
-require 'test_help'
+require 'minitest/autorun'
 
-# Try to load the redgreen test console outputter, if it's available
-begin
-  require 'redgreen'
-rescue LoadError
-end
-
-# Monkey patch the backtrace filter to include project source files 
-module Test::Unit::Util::BacktraceFilter
-  def filter_backtrace(backtrace, prefix = nil)
+module MiniTest
+  def self.filter_backtrace(backtrace)
     backtrace = backtrace.select do |e|
       if ENV['FULL_BACKTRACE']
         true
       else
-        e.include?("ernie") || !(e.include?("/ruby/") || e.include?("/gems/"))
+        !(e.include?("/ruby/") || e.include?("/gems/"))
       end
     end
-    
+
     common_prefix = nil
     backtrace.each do |elem|
       next if elem.start_with? "./"
@@ -48,7 +40,7 @@ module Test::Unit::Util::BacktraceFilter
         common_prefix = String.new(elem)
       end
     end
-    
+
     return backtrace.map do |element|
       if element.start_with? common_prefix && common_prefix.size < element.size
         element[common_prefix.size, element.size]
@@ -63,39 +55,11 @@ module Test::Unit::Util::BacktraceFilter
   end
 end
 
+
 require 'factories'
+MiniTest::Unit::TestCase.send(:include, Factory::Syntax::Methods)
 
-class Test::Unit::TestCase
-  include Factory::Syntax::Methods
-  include Test::Unit::Util::BacktraceFilter
-
-  def setup
-    ActiveRecord::Migration.verbose = false
-    ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations for the test app
-  end
-
-  # Alias for should, scans better sometimes
-  def self.could(verb, &block)
-    context_could :should, verb, &block
-  end
-  def self.could_eventually(verb, &block)
-    context_could :should_eventually, verb, &block
-  end
-
-  # Make it easier to have custom setups outside a context
-  def self.setup(&block)
-    @@setup_block = block
-    class_eval do
-      def setup
-        super
-        instance_eval &@@setup_block
-      end
-    end
-  end
-
-  private
-
-  def self.context_could(method, verb, &block)
-    Shoulda::Context.current_context.send(method, "be able to #{verb}", &block)
-  end
+MiniTest::Unit::TestCase.add_setup_hook do
+  ActiveRecord::Migration.verbose = false
+  ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate") # Migrations in the test app
 end
