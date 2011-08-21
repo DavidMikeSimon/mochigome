@@ -4,6 +4,7 @@ module Ernie
 
     attr_accessor :content
     attr_reader :layers
+    attr_reader :children
 
     def initialize(layers, content = nil)
       layers.each do |cls|
@@ -43,10 +44,6 @@ module Ernie
         idx ? @children[idx] : nil
       else raise ArgumentError.new("DataSet#[] requires an integer or a ActiveRecord")
       end
-    end
-
-    def children
-      to_a
     end
 
     def children_content
