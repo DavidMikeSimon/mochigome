@@ -33,7 +33,7 @@ describe Ernie::DataSet do
 
     it "can have items added at multiple layers" do
       @dataset << @category1
-      @dataset.first.concat  @category1.products 
+      @dataset.first << @category1.products
       assert_equal 1, @dataset.size
       assert_equal 2, @dataset.first.size
       assert_equal @product_a, @dataset.first.first.content
@@ -41,7 +41,7 @@ describe Ernie::DataSet do
     end
 
     it "supports looking up children by content or index" do
-      @dataset.concat [@category1, @category2]
+      @dataset << [@category1, @category2]
       @dataset[@category1] << @product_a
       @dataset[@category2] << @product_c
       assert_equal @product_a, @dataset[0].first.content
@@ -77,20 +77,20 @@ describe Ernie::DataSet do
     end
 
     it "returns the new child DataSet(s) from a concatenation" do
-      child = @dataset << @category1
-      assert_equal @dataset[0], child
+      new_child = @dataset << @category1
+      assert_equal @dataset[0], new_child
 
-      children = @dataset[0].concat [@product_a, @product_b]
-      assert_equal @dataset[0].to_a, children
+      new_children = @dataset[0] << [@product_a, @product_b]
+      assert_equal @dataset[0].children, new_children
     end
   end
 
   describe "when populated" do
     before do
       @dataset = Ernie::DataSet.new([Category, Product])
-      @dataset.concat [@category1, @category2]
-      @dataset[@category1].concat @category1.products
-      @dataset[@category2].concat @category2.products
+      @dataset << [@category1, @category2]
+      @dataset[@category1] << @category1.products
+      @dataset[@category2] << @category2.products
     end
 
     it "returns an array of childrens' ActiveRecords with children_content" do
@@ -113,12 +113,10 @@ describe Ernie::DataSet do
 
     it "can convert to a Ruport table" do
       table = @dataset.to_ruport_table
-      assert_equal ["Category::name", "Product::name", "Product::price"], table.column_names
-      assert_equal [@category1.name, @product_b.name, @product_b.price], table.data[1].to_a
-    end
-
-    it "can convert to a Ruport grouping" do
-      skip
+      titles = ["Category::name", "Product::name", "Product::price"]
+      assert_equal titles, table.column_names
+      values = [@category1.name, @product_b.name, @product_b.price]
+      assert_equal values, table.data[1].to_a
     end
   end
 end

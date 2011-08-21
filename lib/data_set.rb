@@ -21,15 +21,15 @@ module Ernie
     delegate :each, :size, :to => :@children
 
     def <<(item)
-      unless item.is_a?(layers.first)
-        raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{item.class.name}"
+      if item.is_a?(Array)
+        item.map {|i| self << i}
+      else
+        unless item.is_a?(layers.first)
+          raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{item.class.name}"
+        end
+        @children << DataSet.new(layers.drop(1), item)
+        @children.last
       end
-      @children << DataSet.new(layers.drop(1), item)
-      @children.last
-    end
-
-    def concat(items)
-      items.map {|i| self << i}
     end
 
     def [](term)
@@ -43,6 +43,10 @@ module Ernie
         idx ? @children[idx] : nil
       else raise ArgumentError.new("DataSet#[] requires an integer or a ActiveRecord")
       end
+    end
+
+    def children
+      to_a
     end
 
     def children_content

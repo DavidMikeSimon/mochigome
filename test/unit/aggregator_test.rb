@@ -42,4 +42,12 @@ describe Ernie::Aggregator do
     assert_equal [@product_a], data_set[@category1].children_content
     assert_equal [], data_set[@category1][@product_a].children_content
   end
+
+  it "can build a two-layer DataSet focused on a record with a has_many association" do
+    agg = Ernie::Aggregator.new([Category, Product])
+    data_set = agg.focused_on(@category1)
+    assert_equal [@category1], data_set.children_content
+    assert_equal [@product_a, @product_b], data_set[@category1].children_content
+    assert_equal [], data_set[@category1][@product_a].children_content
+  end
 end

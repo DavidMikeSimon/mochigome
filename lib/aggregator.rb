@@ -11,12 +11,18 @@ module Ernie
       # TODO: Test for obj of invalid type (i.e. no layer, not ActiveRecord, etc)
       focus_layer_idx = @layers.find{|cls| obj.is_a?(cls)}
 
-      assoc_name = self.class.edge_assoc(@layers[1], @layers[0])[:name]
+      root_dataset = DataSet.new(@layers)
+      cur = root_dataset
+      @layers.each do |cls|
+        if obj.is_a?(cls)
+          cur = cur << obj
+        else
+          assoc = Aggregator.edge_assoc(obj.class, cls)
+          cur = cur << obj.send(assoc[:name])
+        end
+      end
 
-      dataset = DataSet.new(@layers)
-      subdataset = dataset << obj.send(assoc_name)
-      subdataset << obj
-      return dataset
+      return root_dataset
     end
 
     private
