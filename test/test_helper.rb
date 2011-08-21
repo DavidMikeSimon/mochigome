@@ -18,6 +18,7 @@ end
 
 require 'rubygems'
 require 'minitest/autorun'
+require 'redgreen'
 
 module MiniTest
   def self.filter_backtrace(backtrace)
