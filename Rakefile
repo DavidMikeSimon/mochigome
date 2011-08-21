@@ -24,6 +24,11 @@ Rake::TestTask.new(:test) do |t|
   common_test_settings(t)
 end
 
+desc 'Run tests automatically as files change'
+task :watchr do |t|
+  exec 'watchr test/test.watchr'
+end
+
 desc 'Generate documentation for Ernie.'
 RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'rdoc'
