@@ -9,7 +9,7 @@ describe "an ActiveRecord model" do
   end
 
   it "indicates if it acts_as_report_focus or not" do
-    assert_equal false, @model_class.acts_as_report_focus?
+    refute @model_class.acts_as_report_focus?
     @model_class.class_eval do
       acts_as_report_focus
     end
