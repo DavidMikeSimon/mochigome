@@ -96,14 +96,6 @@ describe Ernie::DataSet do
       @dataset[@category2] << @category2.products
     end
 
-    it "can be shallowly cloned, returning a new DataSet with the same children" do
-      evil_twin = @dataset[@category1].clone
-      refute_equal evil_twin.object_id, @dataset[@category1].object_id
-      assert_equal evil_twin.children, @dataset[@category1].children
-      evil_twin << @product_d
-      assert_includes @dataset[@category1].children_content, @product_d
-    end
-
     it "returns an array of childrens' ActiveRecords with children_content" do
       assert_equal [@category1, @category2], @dataset.children_content
       assert_equal @category1.products, @dataset[@category1].children_content

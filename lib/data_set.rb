@@ -13,12 +13,6 @@ module Ernie
     end
     delegate :each, :size, :empty?, :to => :@children
 
-    def clone
-      tgt = DataSet.new(@layer_types, @content)
-      tgt.instance_variable_set(:@children, @children)
-      tgt
-    end
-
     def <<(item)
       if item.is_a?(Array)
         item.map {|i| self << i}
