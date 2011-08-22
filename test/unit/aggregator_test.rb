@@ -28,11 +28,17 @@ describe Ernie::Aggregator do
     @store_z.products << @product_d
   end
 
+  it "returns an empty DataSet if no focus objects given" do
+    agg = Ernie::Aggregator.new([Category, Product])
+    data_set = agg.focused_on([])
+    assert_empty data_set
+  end
+
   it "can build a one-layer DataSet" do
     agg = Ernie::Aggregator.new([Product])
     data_set = agg.focused_on(@product_a)
     assert_equal [@product_a], data_set.children_content
-    assert_equal [], data_set[@product_a].children_content
+    assert_empty data_set[@product_a].children_content
   end
 
   it "can build a two-layer DataSet focused on a record with a belongs_to association" do
@@ -40,7 +46,15 @@ describe Ernie::Aggregator do
     data_set = agg.focused_on(@product_a)
     assert_equal [@category1], data_set.children_content
     assert_equal [@product_a], data_set[@category1].children_content
-    assert_equal [], data_set[@category1][@product_a].children_content
+    assert_empty data_set[@category1][@product_a].children_content
+  end
+
+  it "can build a two-layer DataSet focused on an array of records in the second layer" do
+    agg = Ernie::Aggregator.new([Category, Product])
+    data_set = agg.focused_on([@product_a, @product_d, @product_b])
+    assert_equal [@category1, @category2], data_set.children_content
+    assert_equal [@product_a, @product_b], data_set[@category1].children_content
+    assert_equal [@product_d], data_set[@category2].children_content
   end
 
   it "can build a two-layer DataSet focused on a record with a has_many association" do
@@ -48,6 +62,6 @@ describe Ernie::Aggregator do
     data_set = agg.focused_on(@category1)
     assert_equal [@category1], data_set.children_content
     assert_equal [@product_a, @product_b], data_set[@category1].children_content
-    assert_equal [], data_set[@category1][@product_a].children_content
+    assert_empty data_set[@category1][@product_a].children_content
   end
 end

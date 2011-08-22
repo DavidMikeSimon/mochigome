@@ -16,8 +16,8 @@ describe Ernie::DataSet do
       @dataset = Ernie::DataSet.new([Category, Product])
     end
 
-    it "knows what its layers are" do
-      assert_equal [Category, Product], @dataset.layers
+    it "knows what its layer_types are" do
+      assert_equal [Category, Product], @dataset.layer_types
     end
 
     it "is empty by default" do
@@ -37,7 +37,16 @@ describe Ernie::DataSet do
       assert_equal 1, @dataset.size
       assert_equal 2, @dataset.first.size
       assert_equal @product_a, @dataset.first.first.content
-      assert_equal Product, @dataset.first.layers.first
+      assert_equal Product, @dataset.first.layer_types.first
+    end
+
+    it "can have items already in DataSets added" do
+      @dataset << Ernie::DataSet.new([Product], @category1)
+      @dataset.first << @category1.products.map{|prod| Ernie::DataSet.new([], prod)}
+      assert_equal 1, @dataset.size
+      assert_equal 2, @dataset.first.size
+      assert_equal @product_a, @dataset.first.first.content
+      assert_equal Product, @dataset.first.layer_types.first
     end
 
     it "supports looking up children by content or index" do
@@ -70,12 +79,6 @@ describe Ernie::DataSet do
       end
     end
 
-    it "only accepts layers that act as report focus" do
-      assert_raises Ernie::InvalidLayerError do
-        Ernie::DataSet.new([Category, BoringDatum])
-      end
-    end
-
     it "returns the new child DataSet(s) from a concatenation" do
       new_child = @dataset << @category1
       assert_equal @dataset[0], new_child
@@ -91,6 +94,14 @@ describe Ernie::DataSet do
       @dataset << [@category1, @category2]
       @dataset[@category1] << @category1.products
       @dataset[@category2] << @category2.products
+    end
+
+    it "can be shallowly cloned, returning a new DataSet with the same children" do
+      evil_twin = @dataset[@category1].clone
+      refute_equal evil_twin.object_id, @dataset[@category1].object_id
+      assert_equal evil_twin.children, @dataset[@category1].children
+      evil_twin << @product_d
+      assert_includes @dataset[@category1].children_content, @product_d
     end
 
     it "returns an array of childrens' ActiveRecords with children_content" do

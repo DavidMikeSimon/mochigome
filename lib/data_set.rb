@@ -3,32 +3,47 @@ module Ernie
     include Enumerable
 
     attr_accessor :content
-    attr_reader :layers
+    attr_reader :layer_types
     attr_reader :children
 
-    def initialize(layers, content = nil)
-      layers.each do |cls|
-        unless cls.acts_as_report_focus?
-          raise Ernie::InvalidLayerError.new(
-            "Class #{cls.name} cannot be a DataSet layer since it does not act as a report focus"
-          )
-        end
-      end
-
-      @layers = layers
+    def initialize(layer_types, content = nil)
+      @layer_types = layer_types
       @content = content
       @children = []
     end
-    delegate :each, :size, :to => :@children
+    delegate :each, :size, :empty?, :to => :@children
+
+    def clone
+      tgt = DataSet.new(@layer_types, @content)
+      tgt.instance_variable_set(:@children, @children)
+      tgt
+    end
 
     def <<(item)
       if item.is_a?(Array)
         item.map {|i| self << i}
       else
-        unless item.is_a?(layers.first)
-          raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{item.class.name}"
+        if item.is_a?(DataSet)
+          unless item.content.is_a?(@layer_types.first)
+            raise LayerMismatchError.new(
+              "Need a #{@layer_types.first.name} but got a DataSet of #{item.class.name}"
+            )
+          end
+          unless item.layer_types == @layer_types.drop(1)
+            raise LayerMismatchError.new(
+              "Got a child DataSet with non-matching child layers, expected #{@layer_types.drop(1).inspect}, got #{item.layer_types.inspect}"
+            )
+          end
+          child_node = item
+        else
+          unless item.is_a?(@layer_types.first)
+            raise LayerMismatchError.new(
+              "Need a #{@layer_types.first.name} but got a #{item.class.name}"
+            )
+          end
+          child_node = DataSet.new(@layer_types.drop(1), item)
         end
-        @children << DataSet.new(layers.drop(1), item)
+        @children << child_node
         @children.last
       end
     end
@@ -37,8 +52,8 @@ module Ernie
       case term
       when Integer then @children[term]
       when ActiveRecord::Base
-        unless term.is_a?(layers.first)
-          raise LayerMismatchError.new "Need a #{layers.first.name} but got a #{term.class.name}"
+        unless term.is_a?(@layer_types.first)
+          raise LayerMismatchError.new "Need a #{@layer_types.first.name} but got a #{term.class.name}"
         end
         idx = @children.index{|c| c.content == term}
         idx ? @children[idx] : nil
