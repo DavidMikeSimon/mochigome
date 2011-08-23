@@ -86,6 +86,15 @@ describe Ernie::DataNode do
       new_children = @datanode[0] << [@product_a, @product_b]
       assert_equal @datanode[0].children, new_children
     end
+
+    it "can hold and return extra aggregated data (with indifferent access)" do
+      @datanode.aggregated[:x] = 123
+      @datanode << [@category1, @category2]
+      @datanode[@category1].aggregated[:x] = 456
+      assert_equal 123, @datanode.aggregated['x']
+      assert_equal 456, @datanode[@category1].aggregated['x']
+      assert_equal nil, @datanode[@category2].aggregated['x']
+    end
   end
 
   describe "when populated" do
