@@ -1,5 +1,5 @@
 module Ernie
-  class DataSet
+  class DataNode
     include Enumerable
 
     attr_accessor :content
@@ -17,15 +17,15 @@ module Ernie
       if item.is_a?(Array)
         item.map {|i| self << i}
       else
-        if item.is_a?(DataSet)
+        if item.is_a?(DataNode)
           unless item.content.is_a?(@layer_types.first)
             raise LayerMismatchError.new(
-              "Need a #{@layer_types.first.name} but got a DataSet of #{item.class.name}"
+              "Need a #{@layer_types.first.name} but got a DataNode of #{item.class.name}"
             )
           end
           unless item.layer_types == @layer_types.drop(1)
             raise LayerMismatchError.new(
-              "Got a child DataSet with non-matching child layers, expected #{@layer_types.drop(1).inspect}, got #{item.layer_types.inspect}"
+              "Got a child DataNode with non-matching child layers, expected #{@layer_types.drop(1).inspect}, got #{item.layer_types.inspect}"
             )
           end
           child_node = item
@@ -35,7 +35,7 @@ module Ernie
               "Need a #{@layer_types.first.name} but got a #{item.class.name}"
             )
           end
-          child_node = DataSet.new(@layer_types.drop(1), item)
+          child_node = DataNode.new(@layer_types.drop(1), item)
         end
         @children << child_node
         @children.last
@@ -51,7 +51,7 @@ module Ernie
         end
         idx = @children.index{|c| c.content == term}
         idx ? @children[idx] : nil
-      else raise ArgumentError.new("DataSet#[] requires an integer or a ActiveRecord")
+      else raise ArgumentError.new("DataNode#[] requires an integer or a ActiveRecord")
       end
     end
 
@@ -61,7 +61,7 @@ module Ernie
 
     def to_xml
       xml = Builder::XmlMarkup.new
-      xml.tag! "dataSet" do
+      xml.tag! "data" do
         append_xml_to(xml)
       end
       xml

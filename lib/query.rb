@@ -1,7 +1,7 @@
 require 'rgl/adjacency'
 
 module Ernie
-  class Aggregator
+  class Query
     def initialize(layer_types)
       # TODO: Validate layer types: must act_as_report_focus, graph correctly, no repeats
       @layer_types = layer_types
@@ -9,17 +9,17 @@ module Ernie
 
     def focused_on(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
-      return DataSet.new(@layer_types) if objs.size == 0 # Empty DataSet for empty input
+      return DataNode.new(@layer_types) if objs.size == 0 # Empty DataNode for empty input
       # TODO: Test for invalid objs (all objs not same type or not a layer type)
 
       # Start at the layer for objs, and descend downwards through layers after that
       downwards_layers = @layer_types.drop_while{|cls| !objs.first.is_a?(cls)}
-      root = DataSet.new(downwards_layers)
+      root = DataNode.new(downwards_layers)
       cur_layer = root << objs
       downwards_layers.drop(1).each do |cls|
-        assoc = Aggregator.edge_assoc(cur_layer.first.content.class, cls)
-        results = cur_layer.map do |dataset|
-          dataset << dataset.content.send(assoc[:name])
+        assoc = Query.edge_assoc(cur_layer.first.content.class, cls)
+        results = cur_layer.map do |datanode|
+          datanode << datanode.content.send(assoc[:name])
         end
         cur_layer = results.flatten # In case it's a to-many assoc
       end
@@ -27,20 +27,20 @@ module Ernie
       # Take our tree so far and include it in parent trees, going up to the first layer
       upwards_layers = @layer_types.take_while{|cls| !objs.first.is_a?(cls)}.reverse
       upwards_layers.each do |cls|
-        assoc = Aggregator.edge_assoc(root.children.first.content.class, cls)
-        parent_children_map = {} # Key is parent ID, value is dataset with parent content
+        assoc = Query.edge_assoc(root.children.first.content.class, cls)
+        parent_children_map = {} # Key is parent ID, value is datanode with parent content
         root.children.each do |child|
           parents = child.content.send(assoc[:name])
           parents = [parents] unless parents.is_a?(Enumerable)
           parents.each do |parent|
-            parent_children_map[parent.id] = DataSet.new(
+            parent_children_map[parent.id] = DataNode.new(
               root.layer_types.dup, parent
             ) unless parent_children_map.has_key?(parent.id)
             parent_children_map[parent.id] << child
           end
         end
         downwards_layers.unshift(cls)
-        root = DataSet.new(downwards_layers)
+        root = DataNode.new(downwards_layers)
         root << parent_children_map.values
       end
 
@@ -74,7 +74,7 @@ module Ernie
     def self.edge_assoc(u, v)
       assoc_graph # Make sure @@edge_assocs has been populated
       assoc = @@edge_assocs[[u,v]]
-      raise AggregationError.new(
+      raise QueryError.new(
         "No association between #{u} and #{v}"
       ) unless assoc
       return assoc
