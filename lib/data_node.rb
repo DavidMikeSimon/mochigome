@@ -81,7 +81,7 @@ module Ernie
       if content
         focus = content.report_focus
         x.tag!(focus.group_name.camelize(:lower), {:recId => content.id}) do
-          focus.data.each do |field|
+          (focus.data + focus.aggregate_data(:all)).each do |field|
             x.tag!(field[:name].camelize(:lower), field[:value])
           end
           append_children_to x

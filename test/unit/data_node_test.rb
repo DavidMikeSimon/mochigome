@@ -10,7 +10,7 @@ describe Ernie::DataNode do
     @product_d = create(:product, :name => "Product D", :category => @category2)
     @boring_datum = create(:boring_datum)
     @store = create(:store)
-    @store_product = create(:store_product, :product => @product_b, :store => @store)
+    @store_product = create(:store_product, :product => @product_c, :store => @store)
     3.times { create(:sale, :store_product => @store_product) }
   end
 
@@ -119,11 +119,14 @@ describe Ernie::DataNode do
       assert_equal @category1.id.to_s, category_nodes[0]['recId']
       assert_equal @category2.id.to_s, category_nodes[1]['recId']
       assert_equal @category2.name, category_nodes[1].xpath('.//name').first.content
+      assert_equal "19.95", category_nodes[1].xpath('.//productsAveragePrice').first.content
       product_nodes = category_nodes[1].xpath('.//product')
       assert_equal @product_c.id.to_s, product_nodes[0]['recId']
       assert_equal @product_d.id.to_s, product_nodes[1]['recId']
       assert_equal @product_c.name, product_nodes[0].xpath('.//name').first.content
       assert_equal @product_c.price.to_s, product_nodes[0].xpath('.//price').first.content
+      assert_equal "3", product_nodes[0].xpath('.//salesCount').first.content
+      assert_equal "0", product_nodes[1].xpath('.//salesCount').first.content
     end
 
     it "can convert to a Ruport table" do
@@ -136,8 +139,8 @@ describe Ernie::DataNode do
         "Product::sales_count"
       ]
       assert_equal titles, table.column_names
-      values = [@category1.name, 19.95, @product_b.name, @product_b.price, 3]
-      assert_equal values, table.data[1].to_a
+      values = [@category2.name, 19.95, @product_c.name, @product_c.price, 3]
+      assert_equal values, table.data[2].to_a
     end
   end
 end
