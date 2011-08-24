@@ -9,9 +9,18 @@ describe Ernie::DataNode do
     @product_c = create(:product, :name => "Product C", :category => @category2)
     @product_d = create(:product, :name => "Product D", :category => @category2)
     @boring_datum = create(:boring_datum)
-    @store = create(:store)
-    @store_product = create(:store_product, :product => @product_c, :store => @store)
-    3.times { create(:sale, :store_product => @store_product) }
+    @store1 = create(:store, :name => "Store 1")
+    @store2 = create(:store, :name => "Store 2")
+    @sp1a = create(:store_product, :product => @product_a, :store => @store1)
+    @sp1b = create(:store_product, :product => @product_b, :store => @store1)
+    @sp1d = create(:store_product, :product => @product_d, :store => @store1)
+    @sp2a = create(:store_product, :product => @product_a, :store => @store2)
+    @sp2c = create(:store_product, :product => @product_c, :store => @store2)
+    3.times { create(:sale, :store_product => @sp1a) }
+    2.times { create(:sale, :store_product => @sp1b) }
+    4.times { create(:sale, :store_product => @sp1d) }
+    5.times { create(:sale, :store_product => @sp2a) }
+    3.times { create(:sale, :store_product => @sp2c) }
   end
 
   describe "when just created" do
@@ -99,7 +108,14 @@ describe Ernie::DataNode do
       @datanode[@category2] << @category2.products.all(:order => :id)
     end
 
-    it "returns an array of childrens' ActiveRecords with children_content" do
+    it "can return field and aggregate data for its content" do
+      fields = @datanode[@category1][@product_a].content_fields
+      assert_includes fields, {:name => "name", :value => "Product A"}
+      assert_includes fields, {:name => "price", :value => 19.95}
+      assert_includes fields, {:name => "sales_count", :value => 8}
+    end
+
+    it "can return an array of childrens' ActiveRecords" do
       assert_equal [@category1, @category2], @datanode.children_content
       assert_equal @category1.products, @datanode[@category1].children_content
     end
@@ -117,7 +133,7 @@ describe Ernie::DataNode do
       assert_equal @product_c.name, product_nodes[0].xpath('.//name').first.content
       assert_equal @product_c.price.to_s, product_nodes[0].xpath('.//price').first.content
       assert_equal "3", product_nodes[0].xpath('.//salesCount').first.content
-      assert_equal "0", product_nodes[1].xpath('.//salesCount').first.content
+      assert_equal "4", product_nodes[1].xpath('.//salesCount').first.content
     end
 
     it "can convert to a Ruport table" do

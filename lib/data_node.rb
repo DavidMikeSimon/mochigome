@@ -73,15 +73,19 @@ module Ernie
       table
     end
 
+    def content_fields
+      return [] unless content
+      focus = content.report_focus
+      return focus.data + focus.aggregate_data(:all)
+    end
+
     private
 
     def append_xml_to(x)
       if content
         focus = content.report_focus
         x.tag!(focus.group_name.camelize(:lower), {:recId => content.id}) do
-          (focus.data + focus.aggregate_data(:all)).each do |field|
-            x.tag!(field[:name].camelize(:lower), field[:value])
-          end
+          content_fields.each {|field| x.tag!(field[:name].camelize(:lower), field[:value])}
           append_children_to x
         end
       else
@@ -96,8 +100,7 @@ module Ernie
     def flat_column_names
       if @content
         focus = @content.report_focus
-        colnames = focus.data.map{|f| "#{focus.group_name}::#{f[:name]}"}
-        colnames += focus.aggregate_data(:all).map{|f| "#{focus.group_name}::#{f[:name]}"}
+        colnames = content_fields.map {|f| "#{focus.group_name}::#{f[:name]}"}
       else
         colnames = []
       end
@@ -110,7 +113,7 @@ module Ernie
     def append_rows_to(table, stack = [])
       if @content
         focus = @content.report_focus
-        stack.push ((focus.data + focus.aggregate_data(:all)).map{|r| r[:value]})
+        stack.push content_fields.map{|r| r[:value]}
       end
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, stack)}
