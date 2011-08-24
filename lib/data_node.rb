@@ -5,13 +5,11 @@ module Ernie
     attr_accessor :content
     attr_reader :layer_types
     attr_reader :children
-    attr_reader :aggregated
 
     def initialize(layer_types, content = nil)
       @layer_types = layer_types
       @content = content
       @children = []
-      @aggregated = HashWithIndifferentAccess.new
     end
     delegate :each, :size, :empty?, :to => :@children
 
