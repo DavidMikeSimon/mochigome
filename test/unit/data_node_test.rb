@@ -127,13 +127,11 @@ describe Ernie::DataNode do
       table = @datanode.to_ruport_table
       titles = [
         "Category::name",
-        "Category::products_average_price",
         "Product::name",
         "Product::price",
-        "Product::sales_count"
       ]
       assert_equal titles, table.column_names
-      values = [@category1.name, 19.95, @product_b.name, @product_b.price, 0]
+      values = [@category1.name, @product_b.name, @product_b.price]
       assert_equal values, table.data[1].to_a
     end
   end
