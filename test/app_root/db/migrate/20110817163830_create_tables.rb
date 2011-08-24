@@ -43,6 +43,7 @@ class CreateTables < ActiveRecord::Migration
       t.string :a
       t.string :b
       t.integer :product_id
+      t.integer :x
     end
 
     # A model that has nothing to do with reports
@@ -51,7 +52,7 @@ class CreateTables < ActiveRecord::Migration
       t.string :bar
     end
   end
-  
+
   def self.down
     drop_table :products
     drop_table :categories

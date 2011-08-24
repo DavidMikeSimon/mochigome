@@ -7,8 +7,12 @@ module Ernie
   module ModelExtensions
     def self.included(base)
       base.extend(ClassMethods)
+
       base.write_inheritable_attribute :ernie_focus_settings, nil
       base.class_inheritable_reader :ernie_focus_settings
+
+      base.write_inheritable_attribute :ernie_aggregations, []
+      base.class_inheritable_reader :ernie_aggregations
     end
 
     module ClassMethods
@@ -25,6 +29,56 @@ module Ernie
 
       def acts_as_report_focus?
         !!ernie_focus_settings
+      end
+
+      AGGREGATION_FUNCS = {
+        'count' => 'count()',
+        'distinct' => 'count(distinct %s)',
+        'average' => 'avg(%s)',
+        'avg' => 'avg(%s)',
+        'minimum' => 'min(%s)',
+        'min' => 'min(%s)',
+        'maximum' => 'max(%s)',
+        'max' => 'max(%s)',
+        'sum' => 'sum(%s)'
+      }
+
+      def has_report_aggregations(aggregations)
+        unless aggregations.respond_to?(:each)
+          raise ModelSetupError.new "Call has_report_aggregations with an Enumerable"
+        end
+
+        def aggregation_expr(obj)
+          if obj.is_a?(String)
+            AGGREGATION_FUNCS.each do |func, expr_pat|
+              if expr_pat.include?('%s')
+                if obj =~ /^#{func}[-_ ](.+)/i
+                  return (expr_pat % $1)
+                end
+              else
+                if obj.downcase == func
+                  return expr_pat
+                end
+              end
+            end
+          end
+          raise ModelSetupError.new "Invalid aggregation expr: #{obj.inspect}"
+        end
+
+        additions = aggregations.map do |f|
+          case f
+          when String, Symbol then {
+            :name => f.to_s,
+            :expr => aggregation_expr(f.to_s)
+          }
+          else raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
+          end
+        end
+        ernie_aggregations.concat(additions)
+      end
+
+      def has_report_aggregations?
+        ernie_aggregations.size > 0
       end
     end
 
@@ -48,9 +102,29 @@ module Ernie
     end
 
     def data
-      self.fields.map do |field|
+      # TODO: Use an ordered hash here
+      r = self.fields.map do |field|
         {:name => field[:name], :value => field[:value_func].call(@owner)}
       end
+      @owner.class.reflections.each do |assoc_name, assoc|
+        if assoc.klass.has_report_aggregations?
+          assoc.klass.ernie_aggregations.each do |agg|
+            r << {
+              :name => "#{assoc_name}_#{agg[:name]}",
+              # FIXME: Is there a way to do below without create a fake instance of assoc.klass?
+              :value => @owner.send(assoc_name).all(
+                :select => "(#{agg[:expr]}) AS erniecalc"
+              ).first.erniecalc
+            }
+          end
+        end
+      end
+      return r
+    end
+
+    def aggregate_data(assoc_name)
+      # TODO: Exception if given bad association name (i.e. no assoc, belongs_to)
+      data_rows = self.send(assoc_name)
     end
   end
 

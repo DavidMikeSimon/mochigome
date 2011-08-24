@@ -195,4 +195,40 @@ describe "an ActiveRecord model" do
     end
     assert Ernie.reportFocusModels.include?(@model_class)
   end
+
+  it "can specify aggregated data to be collected" do
+    @model_class.class_eval do
+      has_report_aggregations [:average_x, :Count, "sum x"]
+    end
+    # Peeking in past API to make sure it set the expressions correctly
+    assert_equal [
+      {:name => "average_x", :expr => "avg(x)"},
+      {:name => "Count", :expr => "count()"},
+      {:name => "sum x", :expr => "sum(x)"}
+    ], @model_class.ernie_aggregations
+  end
+
+  describe "with some aggregatable data" do
+    before do
+      @store1 = create(:store)
+      @store2 = create(:store)
+      @product_a = create(:product, :name => "Product A", :price => 30)
+      @product_b = create(:product, :name => "Product B", :price => 50)
+      @spW = create(:store_product, :store => @store1, :product => @product_a)
+      @spX = create(:store_product, :store => @store1, :product => @product_b)
+      @spY = create(:store_product, :store => @store2, :product => @product_a)
+      @spZ = create(:store_product, :store => @store2, :product => @product_b)
+      2.times { create(:sale, :store_product => @spW) }
+      4.times { create(:sale, :store_product => @spX) }
+      7.times { create(:sale, :store_product => @spY) }
+      3.times { create(:sale, :store_product => @spZ) }
+    end
+
+    it "can collect aggregate data from a report focus through an association" do
+      # W + Y (2 + 7)
+      assert_includes @product_a.report_focus.data, {:name => 'sales_count', :value => 9}
+      # X + Z (4 + 3)
+      assert_includes @product_b.report_focus.data, {:name => 'sales_count', :value => 7}
+    end
+  end
 end
