@@ -1,5 +1,4 @@
 - Need to think about aggregation a little differently; apply context in DataSet layers above when selecting (i.e. when doing a DataSet on [Store, Category, Product], make sure to only include product sales that are for the given store, since that's part of the path between store and product)
 - Best way to do this is to move the actual work of running aggregations out of DataSet entirely, put the simple 'aggregated' attribute back in DataSet, and give Query the job of actually calling ModelExtensions aggregation methods (with appropriate layer-context varables) and collecting the aggregate data
-- Honestly should probably just dissociate DataSet from ActiveRecord entirely, and just make it a tree of hashes
 - Do as few queries as possible to accomplish stuff; this also encourages app to rely on SQL's 'IN' syntax and magical grouping/joining abilities to make aggregation easier
 - Replace all the TODOs and FIXMEs with whatever they're asking for (additional checks, use of ordered indifferent hashes instead of arrays of hashes, etc.)

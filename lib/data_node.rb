@@ -1,126 +1,88 @@
-module Ernie
-  class DataNode
-    include Enumerable
+require 'active_support'
 
-    attr_accessor :content
-    attr_reader :layer_types
+module Ernie
+  def self.hash_with_symbol_keys(h)
+    r = {}
+    h.each{|k,v| r[k.to_sym] = v}
+    r
+  end
+
+  class DataNode < ActiveSupport::OrderedHash
+    attr_accessor :type_name
     attr_reader :children
 
-    def initialize(layer_types, content = nil)
-      @layer_types = layer_types
-      @content = content
+    def initialize(type_name, content = {})
+      # Convert content keys to symbols
+      # TODO Can I do this better with some kind of OrderedHashWithIndifferentAccess?
+      type_name = type_name.to_sym
+      unless content.keys.all?{|k| k.is_a?(Symbol)}
+        content = Ernie::hash_with_symbol_keys(content)
+      end
+      self.replace(content)
+      @type_name = type_name
       @children = []
     end
-    delegate :each, :size, :empty?, :to => :@children
+
+    def merge!(a)
+      if a.is_a?(Array)
+        a.each do |h|
+          self[h.keys.first.to_sym] = h.values.first
+        end
+      else
+        super
+      end
+    end
 
     def <<(item)
       if item.is_a?(Array)
         item.map {|i| self << i}
       else
-        if item.is_a?(DataNode)
-          unless item.content.is_a?(@layer_types.first)
-            raise LayerMismatchError.new(
-              "Need a #{@layer_types.first.name} but got a DataNode of #{item.class.name}"
-            )
-          end
-          unless item.layer_types == @layer_types.drop(1)
-            raise LayerMismatchError.new(
-              "Got a child DataNode with non-matching child layers, expected #{@layer_types.drop(1).inspect}, got #{item.layer_types.inspect}"
-            )
-          end
-          child_node = item
-        else
-          unless item.is_a?(@layer_types.first)
-            raise LayerMismatchError.new(
-              "Need a #{@layer_types.first.name} but got a #{item.class.name}"
-            )
-          end
-          child_node = DataNode.new(@layer_types.drop(1), item)
-        end
-        @children << child_node
+        raise DataNodeError.new("New child #{item} is not a DataNode") unless item.is_a?(DataNode)
+        @children << item
         @children.last
       end
     end
 
-    def [](term)
-      case term
-      when Integer then @children[term]
-      when ActiveRecord::Base
-        unless term.is_a?(@layer_types.first)
-          raise LayerMismatchError.new "Need a #{@layer_types.first.name} but got a #{term.class.name}"
-        end
-        idx = @children.index{|c| c.content == term}
-        idx ? @children[idx] : nil
-      else raise ArgumentError.new("DataNode#[] requires an integer or a ActiveRecord")
-      end
-    end
-
-    def children_content
-      @children.map(&:content)
-    end
-
+    # TODO: Only define xml-related methods if nokogiri loaded
     def to_xml
       xml = Builder::XmlMarkup.new
-      xml.tag! "data" do
-        append_xml_to(xml)
-      end
+      append_xml_to(xml)
       xml
     end
 
+    # TODO: Only define ruport-related methods if ruport is loaded
     def to_ruport_table
       table = Ruport::Data::Table.new(:column_names => flat_column_names)
       append_rows_to(table)
       table
     end
 
-    def content_fields
-      return [] unless content
-      focus = content.report_focus
-      return focus.data + focus.aggregate_data(:all)
-    end
-
     private
 
     def append_xml_to(x)
-      if content
-        focus = content.report_focus
-        x.tag!(focus.group_name.camelize(:lower), {:recId => content.id}) do
-          content_fields.each {|field| x.tag!(field[:name].camelize(:lower), field[:value])}
-          append_children_to x
-        end
-      else
-        append_children_to x
+      x.tag!(@type_name.to_s.camelize(:lower), has_key?(:id) ? {:id => self[:id]} : {}) do
+        each {|key, value| x.tag!(key.to_s.camelize(:lower), value)}
+        @children.each {|child| child.send(:append_xml_to, x)}
       end
-    end
-
-    def append_children_to(x)
-      @children.each {|child| child.send(:append_xml_to, x)}
     end
 
     def flat_column_names
-      if @content
-        focus = @content.report_focus
-        colnames = content_fields.map {|f| "#{focus.group_name}::#{f[:name]}"}
-      else
-        colnames = []
-      end
+      colnames = keys.map {|key| "#{@type_name}::#{key}"}
       if @children.size > 0
+        # All children should have the same content keys
         colnames += @children.first.send(:flat_column_names)
       end
       colnames
     end
 
     def append_rows_to(table, stack = [])
-      if @content
-        focus = @content.report_focus
-        stack.push content_fields.map{|r| r[:value]}
-      end
+      stack.push values
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, stack)}
       else
         table << stack.flatten(1)
       end
-      stack.pop if @content
+      stack.pop
     end
   end
 end
