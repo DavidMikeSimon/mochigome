@@ -99,6 +99,7 @@ module Ernie
       if @content
         focus = @content.report_focus
         colnames = focus.data.map{|f| "#{focus.group_name}::#{f[:name]}"}
+        colnames += focus.aggregate_data(:all).map{|f| "#{focus.group_name}::#{f[:name]}"}
       else
         colnames = []
       end
@@ -109,7 +110,10 @@ module Ernie
     end
 
     def append_rows_to(table, stack = [])
-      stack.push @content.report_focus.data.map{|r| r[:value]} if @content
+      if @content
+        focus = @content.report_focus
+        stack.push ((focus.data + focus.aggregate_data(:all)).map{|r| r[:value]})
+      end
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, stack)}
       else

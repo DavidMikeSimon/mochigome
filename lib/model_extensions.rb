@@ -110,15 +110,20 @@ module Ernie
 
     def aggregate_data(assoc_name)
       # TODO: Use an ordered hash here
-      # TODO: Check if association actually available
-      @owner.class.reflections[assoc_name.to_sym].klass.ernie_aggregations.map do |agg|
-        {
-          :name => "#{assoc_name}_#{agg[:name]}",
-          # FIXME: Is there a way to do below without creating a fake instance of assoc.klass?
-          :value => @owner.send(assoc_name).all(
-            :select => "(#{agg[:expr]}) AS erniecalc"
-          ).first.erniecalc
-        }
+      assoc_name = assoc_name.to_sym
+      if assoc_name == :all
+        @owner.class.reflections.map{|name, assoc| aggregate_data(name)}.compact.flatten(1)
+      else
+        # TODO: Check if association actually available
+        @owner.class.reflections[assoc_name].klass.ernie_aggregations.map do |agg|
+          {
+            :name => "#{assoc_name}_#{agg[:name]}",
+            # FIXME: Is there a way to do below without creating a fake instance of assoc.klass?
+            :value => @owner.send(assoc_name).all(
+              :select => "(#{agg[:expr]}) AS erniecalc"
+            ).first.erniecalc
+          }
+        end
       end
     end
   end

@@ -230,5 +230,10 @@ describe "an ActiveRecord model" do
       assert_includes @product_b.report_focus.aggregate_data('sales'),
         {:name => 'sales_count', :value => 7} # X + Z (4 + 3)
     end
+
+    it "can collect aggregate data through all known associations with :all keyword" do
+      assert_includes @product_a.report_focus.aggregate_data(:all),
+        {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
+    end
   end
 end

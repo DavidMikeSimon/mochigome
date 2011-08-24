@@ -9,6 +9,9 @@ describe Ernie::DataNode do
     @product_c = create(:product, :name => "Product C", :category => @category2)
     @product_d = create(:product, :name => "Product D", :category => @category2)
     @boring_datum = create(:boring_datum)
+    @store = create(:store)
+    @store_product = create(:store_product, :product => @product_b, :store => @store)
+    3.times { create(:sale, :store_product => @store_product) }
   end
 
   describe "when just created" do
@@ -101,8 +104,8 @@ describe Ernie::DataNode do
     before do
       @datanode = Ernie::DataNode.new([Category, Product])
       @datanode << [@category1, @category2]
-      @datanode[@category1] << @category1.products
-      @datanode[@category2] << @category2.products
+      @datanode[@category1] << @category1.products.all(:order => :id)
+      @datanode[@category2] << @category2.products.all(:order => :id)
     end
 
     it "returns an array of childrens' ActiveRecords with children_content" do
@@ -127,11 +130,13 @@ describe Ernie::DataNode do
       table = @datanode.to_ruport_table
       titles = [
         "Category::name",
+        "Category::products_average_price",
         "Product::name",
         "Product::price",
+        "Product::sales_count"
       ]
       assert_equal titles, table.column_names
-      values = [@category1.name, @product_b.name, @product_b.price]
+      values = [@category1.name, 19.95, @product_b.name, @product_b.price, 3]
       assert_equal values, table.data[1].to_a
     end
   end
