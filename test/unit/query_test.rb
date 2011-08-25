@@ -37,52 +37,52 @@ describe Ernie::Query do
     assert_equal a, get_objs(b)
   end
 
-  it "returns an empty DataNode if no focus objects given" do
+  it "returns an empty DataNode if no objects given" do
     q = Ernie::Query.new([Category, Product])
-    data_node = q.focused_on([])
+    data_node = q.run([])
     assert_empty data_node
     assert_empty data_node.children
   end
 
   it "can build a one-layer DataNode" do
     q = Ernie::Query.new([Product])
-    data_node = q.focused_on(@product_a)
+    data_node = q.run(@product_a)
     assert_equal_objs [@product_a], data_node.children
     assert_empty data_node.children[0].children
   end
 
-  it "can build a two-layer DataNode focused on a record with a belongs_to association" do
+  it "can build a two-layer DataNode from a record with a belongs_to association" do
     q = Ernie::Query.new([Category, Product])
-    data_node = q.focused_on(@product_a)
+    data_node = q.run(@product_a)
     assert_equal_objs [@category1], data_node.children
     assert_equal_objs [@product_a], data_node.children[0].children
     assert_empty data_node.children[0].children[0].children
   end
 
-  it "can build a two-layer DataNode focused on an array of records in the second layer" do
+  it "can build a two-layer DataNode from an array of records in the second layer" do
     q = Ernie::Query.new([Category, Product])
-    data_node = q.focused_on([@product_a, @product_d, @product_b])
+    data_node = q.run([@product_a, @product_d, @product_b])
     assert_equal_objs [@category1, @category2], data_node.children
     assert_equal_objs [@product_a, @product_b], data_node.children[0].children
     assert_equal_objs [@product_d], data_node.children[1].children
   end
 
-  it "can build a two-layer DataNode focused on a record with a has_many association" do
+  it "can build a two-layer DataNode from a record with a has_many association" do
     q = Ernie::Query.new([Category, Product])
-    data_node = q.focused_on(@category1)
+    data_node = q.run(@category1)
     assert_equal_objs [@category1], data_node.children
     assert_equal_objs [@product_a, @product_b], data_node.children[0].children
     assert_empty data_node.children[0].children[0].children
   end
 
-  it "can build a three-layer DataNode focused on any layer" do
+  it "can build a three-layer DataNode from any layer" do
     q = Ernie::Query.new([Owner, Store, Product])
     [
       [@john, @jane],
       [@store_x, @store_y, @store_z],
       [@product_a, @product_b, @product_c, @product_d, @product_e]
-    ].each do |focus|
-      data_node = q.focused_on(focus)
+    ].each do |tgt|
+      data_node = q.run(tgt)
       assert_equal_objs [@john, @jane], data_node.children
       assert_equal_objs [@store_x], data_node.children[0].children
       assert_equal_objs [@store_y, @store_z], data_node.children[1].children

@@ -8,7 +8,7 @@ module Ernie
       @name = name
     end
 
-    def focused_on(objs)
+    def run(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
       return DataNode.new(@name) if objs.size == 0 # Empty DataNode for empty input
       # TODO: Test for invalid objs (all objs not same type or not a layer type)
