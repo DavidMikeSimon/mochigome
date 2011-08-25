@@ -101,8 +101,8 @@ module Ernie
       @fields = settings.options[:fields] || []
     end
 
-    def data
-      field_data.merge(aggregate_data(:all))
+    def data(options = {})
+      field_data.merge(aggregate_data(:all, options))
     end
 
     def field_data
@@ -113,20 +113,36 @@ module Ernie
       h
     end
 
-    def aggregate_data(assoc_name)
+    def aggregate_data(assoc_name, options = {})
       h = ActiveSupport::OrderedHash.new
       assoc_name = assoc_name.to_sym
       if assoc_name == :all
         @owner.class.reflections.each do |name, assoc|
-          h.merge! aggregate_data(name)
+          h.merge! aggregate_data(name, options)
         end
       else
-        # TODO: Check if association actually available
-        @owner.class.reflections[assoc_name].klass.ernie_aggregations.each do |agg|
-          # FIXME: Do this without creating a fake instance of assoc.klass
-          h["#{assoc_name}_#{agg[:name]}"] = @owner.send(assoc_name).all(
-            :select => "(#{agg[:expr]}) AS erniecalc"
-          ).first.erniecalc
+        # TODO: Check if requested association is actually available
+        closest_assoc = @owner.class.reflections[assoc_name]
+        closest_assoc_object = @owner
+        tgt_class = closest_assoc.klass
+        if options.has_key?(:context)
+          options[:context].each do |obj|
+            # TODO: Probably should only care about plural associations
+            obj.class.reflect_on_all_associations.each do |assoc|
+              # TODO: Maybe should count recursive throughs and pick the shortest chain?
+              if assoc.klass == tgt_class && !assoc.through_reflection
+                closest_assoc = assoc
+                closest_assoc_object = obj
+              end
+            end
+          end
+        end
+        tgt_class.ernie_aggregations.each do |agg|
+          # TODO: There *must* be a better way to do this query
+          h["#{assoc_name}_#{agg[:name]}"] =
+            closest_assoc_object.send(closest_assoc.name).all(
+              :select => "(#{agg[:expr]}) AS erniecalc"
+            ).first.erniecalc
         end
       end
       h

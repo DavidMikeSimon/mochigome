@@ -22,6 +22,7 @@ module Ernie
         new_layer = []
         assoc = Query.edge_assoc(cur_layer.first[:obj].class, cls)
         cur_layer.each do |datanode|
+          # FIXME: Don't assume that downards means plural association
           datanode[:obj].send(assoc[:name]).each do |obj|
             subnode = datanode << DataNode.new(obj.class.name, [{:obj => obj}])
             new_layer << subnode
@@ -55,12 +56,17 @@ module Ernie
 
     private
 
-    def focus_data_node_objs(node)
+    def focus_data_node_objs(node, obj_stack=[])
+      # TODO: As possible contexts, also need to include join models skipped by :through
+      pushed = false
       if node.has_key?(:obj)
         obj = node.delete(:obj)
-        node.merge!(obj.report_focus.data)
+        node.merge!(obj.report_focus.data(:context => obj_stack))
+        obj_stack.push(obj)
+        pushed = true
       end
       node.children.each {|c| focus_data_node_objs(c)}
+      obj_stack.pop if pushed
     end
 
     @@assoc_graph = nil

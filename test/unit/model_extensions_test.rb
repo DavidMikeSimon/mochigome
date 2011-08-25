@@ -211,14 +211,18 @@ describe "an ActiveRecord model" do
       @store2 = create(:store)
       @product_a = create(:product, :name => "Product A", :price => 30)
       @product_b = create(:product, :name => "Product B", :price => 50)
-      @spW = create(:store_product, :store => @store1, :product => @product_a)
-      @spX = create(:store_product, :store => @store1, :product => @product_b)
-      @spY = create(:store_product, :store => @store2, :product => @product_a)
-      @spZ = create(:store_product, :store => @store2, :product => @product_b)
-      2.times { create(:sale, :store_product => @spW) }
-      4.times { create(:sale, :store_product => @spX) }
-      7.times { create(:sale, :store_product => @spY) }
-      3.times { create(:sale, :store_product => @spZ) }
+      @sp1A = create(:store_product, :store => @store1, :product => @product_a)
+      @sp1B = create(:store_product, :store => @store1, :product => @product_b)
+      @sp2A = create(:store_product, :store => @store2, :product => @product_a)
+      @sp2B = create(:store_product, :store => @store2, :product => @product_b)
+      [
+        [2, @sp1A],
+        [4, @sp1B],
+        [7, @sp2A],
+        [3, @sp2B]
+      ].each do |num, sp|
+        num.times { create(:sale, :store_product => sp) }
+      end
     end
 
     it "can collect aggregate data from a report focus through an association" do
@@ -234,6 +238,16 @@ describe "an ActiveRecord model" do
       data = @product_a.report_focus.data
       assert_equal 9, data['sales_count']
       assert_equal "Product A", data['name']
+    end
+
+    it "can return data aggregated in the context of another class with similar assoc" do
+      focus = @product_a.report_focus
+      assert_equal 2, focus.aggregate_data('sales', :context => [@sp1A])['sales_count']
+    end
+
+    it "can return data aggregated in the context through the data method" do
+      focus = @product_a.report_focus
+      assert_equal 2, focus.data(:context => [@sp1A])['sales_count']
     end
   end
 end
