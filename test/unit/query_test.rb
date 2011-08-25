@@ -19,13 +19,25 @@ describe Ernie::Query do
     @store_y = create(:store, :name => "Jane's Store (North)", :owner => @jane)
     @store_z = create(:store, :name => "Jane's Store (South)", :owner => @jane)
 
-    @store_x.products << @product_a
-    @store_x.products << @product_c
-    @store_y.products << @product_a
-    @store_y.products << @product_b
-    @store_y.products << @product_e
-    @store_z.products << @product_c
-    @store_z.products << @product_d
+    @sp_xa = create(:store_product, :store => @store_x, :product => @product_a)
+    @sp_xc = create(:store_product, :store => @store_x, :product => @product_c)
+    @sp_ya = create(:store_product, :store => @store_y, :product => @product_a)
+    @sp_yb = create(:store_product, :store => @store_y, :product => @product_b)
+    @sp_ye = create(:store_product, :store => @store_y, :product => @product_e)
+    @sp_zc = create(:store_product, :store => @store_z, :product => @product_c)
+    @sp_zd = create(:store_product, :store => @store_z, :product => @product_d)
+
+    [
+      [@sp_xa, 5],
+      [@sp_xc, 3],
+      [@sp_ya, 4],
+      [@sp_yb, 6],
+      [@sp_ye, 1],
+      [@sp_zc, 2],
+      [@sp_zd, 3]
+    ].each do |sp, n|
+      n.times{create(:sale, :store_product => sp)}
+    end
   end
 
   # Convenience function to check DataSet output validity
@@ -87,5 +99,14 @@ describe Ernie::Query do
       assert_equal_objs [@product_c, @product_d],
         data_node.children[1].children[1].children
     end
+  end
+
+  it "collects aggregate data appropriately to the context of all layers" do
+    q = Ernie::Query.new([Owner, Store, Product])
+    data_node = q.run([@store_x, @store_y, @store_z])
+    # Store X, Product C
+    assert_equal 3, data_node.children[0].children[0].children[1]['sales_count']
+    # Store Z, Product C
+    assert_equal 2, data_node.children[1].children[1].children[0]['sales_count']
   end
 end
