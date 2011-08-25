@@ -49,10 +49,19 @@ module Ernie
         root << parent_children_map.values
       end
 
+      focus_data_node_objs(root)
       return root
     end
 
     private
+
+    def focus_data_node_objs(node)
+      if node.has_key?(:obj)
+        obj = node.delete(:obj)
+        node.merge!(obj.report_focus.data)
+      end
+      node.children.each {|c| focus_data_node_objs(c)}
+    end
 
     @@assoc_graph = nil
     @@edge_assocs = {}

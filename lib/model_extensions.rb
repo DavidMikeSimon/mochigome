@@ -102,33 +102,34 @@ module Ernie
     end
 
     def data
-      field_data + aggregate_data(:all)
+      field_data.merge(aggregate_data(:all))
     end
 
     def field_data
-      # TODO: Use an ordered hash here
-      self.fields.map do |field|
-        {:name => field[:name], :value => field[:value_func].call(@owner)}
+      h = ActiveSupport::OrderedHash.new
+      self.fields.each do |field|
+        h[field[:name]] = field[:value_func].call(@owner)
       end
+      h
     end
 
     def aggregate_data(assoc_name)
-      # TODO: Use an ordered hash here
+      h = ActiveSupport::OrderedHash.new
       assoc_name = assoc_name.to_sym
       if assoc_name == :all
-        @owner.class.reflections.map{|name, assoc| aggregate_data(name)}.compact.flatten(1)
+        @owner.class.reflections.each do |name, assoc|
+          h.merge! aggregate_data(name)
+        end
       else
         # TODO: Check if association actually available
-        @owner.class.reflections[assoc_name].klass.ernie_aggregations.map do |agg|
-          {
-            :name => "#{assoc_name}_#{agg[:name]}",
-            # FIXME: Is there a way to do below without creating a fake instance of assoc.klass?
-            :value => @owner.send(assoc_name).all(
-              :select => "(#{agg[:expr]}) AS erniecalc"
-            ).first.erniecalc
-          }
+        @owner.class.reflections[assoc_name].klass.ernie_aggregations.each do |agg|
+          # FIXME: Do this without creating a fake instance of assoc.klass
+          h["#{assoc_name}_#{agg[:name]}"] = @owner.send(assoc_name).all(
+            :select => "(#{agg[:expr]}) AS erniecalc"
+          ).first.erniecalc
         end
       end
+      h
     end
   end
 

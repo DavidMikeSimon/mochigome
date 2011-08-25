@@ -28,13 +28,9 @@ describe Ernie::Query do
     @store_z.products << @product_d
   end
 
-  # Convenience functions
-  def get_objs(array)
-    array.map{|c| c[:obj]}
-  end
-
+  # Convenience function to check DataSet output validity
   def assert_equal_objs(a, b)
-    assert_equal a, get_objs(b)
+    assert_equal a.map{|obj| obj.report_focus.data}, b
   end
 
   it "returns an empty DataNode if no objects given" do

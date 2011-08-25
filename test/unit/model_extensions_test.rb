@@ -90,10 +90,9 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    expected = [
-      {:name => "a", :value => "abc"},
-      {:name => "b", :value => "xyz"}
-    ]
+    expected = ActiveSupport::OrderedHash.new
+    expected["a"] = "abc"
+    expected["b"] = "xyz"
     assert_equal expected, i.report_focus.field_data
   end
 
@@ -102,7 +101,7 @@ describe "an ActiveRecord model" do
       acts_as_report_focus
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    assert_equal [], i.report_focus.field_data
+    assert_empty i.report_focus.field_data
   end
 
   it "can specify only some of its fields" do
@@ -112,9 +111,8 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    expected = [
-      {:name => "b", :value => "xyz"}
-    ]
+    expected = ActiveSupport::OrderedHash.new
+    expected["b"] = "xyz"
     assert_equal expected, i.report_focus.field_data
   end
 
@@ -125,10 +123,9 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    expected = [
-      {:name => "b", :value => "xyz"},
-      {:name => "a", :value => "abc"}
-    ]
+    expected = ActiveSupport::OrderedHash.new
+    expected["b"] = "xyz"
+    expected["a"] = "abc"
     assert_equal expected, i.report_focus.field_data
   end
 
@@ -140,10 +137,9 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    expected = [
-      {:name => "a", :value => "abc"},
-      {:name => "b", :value => "xyz"}
-    ]
+    expected = ActiveSupport::OrderedHash.new
+    expected["a"] = "abc"
+    expected["b"] = "xyz"
     assert_equal expected, i.report_focus.field_data
   end
 
@@ -154,10 +150,9 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    expected = [
-      {:name => "Abraham", :value => "abc"},
-      {:name => "Barcelona", :value => "xyz"}
-    ]
+    expected = ActiveSupport::OrderedHash.new
+    expected["Abraham"] = "abc"
+    expected["Barcelona"] = "xyz"
     assert_equal expected, i.report_focus.field_data
   end
 
@@ -168,7 +163,9 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    assert_equal [{:name => "concat", :value => "abcxyz"}], i.report_focus.field_data
+    expected = ActiveSupport::OrderedHash.new
+    expected["concat"] = "abcxyz"
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "cannot call f.fields with nonsense" do
@@ -225,21 +222,18 @@ describe "an ActiveRecord model" do
     end
 
     it "can collect aggregate data from a report focus through an association" do
-      assert_includes @product_a.report_focus.aggregate_data('sales'),
-        {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
-      assert_includes @product_b.report_focus.aggregate_data('sales'),
-        {:name => 'sales_count', :value => 7} # X + Z (4 + 3)
+      assert_equal 9, @product_a.report_focus.aggregate_data('sales')['sales_count']
+      assert_equal 7, @product_b.report_focus.aggregate_data('sales')['sales_count']
     end
 
     it "can collect aggregate data through all known associations with :all keyword" do
-      assert_includes @product_a.report_focus.aggregate_data(:all),
-        {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
+      assert_equal 9, @product_a.report_focus.aggregate_data(:all)['sales_count']
     end
 
     it "returns both field data and all aggregate data with the data method" do
       data = @product_a.report_focus.data
-      assert_includes data, {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
-      assert_includes data, {:name => 'name', :value => "Product A"}
+      assert_equal 9, data['sales_count']
+      assert_equal "Product A", data['name']
     end
   end
 end
