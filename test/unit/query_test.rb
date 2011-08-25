@@ -51,7 +51,6 @@ describe Ernie::Query do
   end
 
   it "can build a two-layer DataNode focused on an array of records in the second layer" do
-    #FIXME: Sometimes an ordering error (try full test run w/ seed 10852)
     q = Ernie::Query.new([Category, Product])
     data_node = q.focused_on([@product_a, @product_d, @product_b])
     assert_equal [@category1, @category2], data_node.children.map{|c| c[:obj]}
