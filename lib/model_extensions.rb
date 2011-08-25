@@ -102,14 +102,14 @@ module Ernie
     end
 
     def data
-      # TODO: Use an ordered indifferent hash here
+      # TODO: Use an ordered hash here
       self.fields.map do |field|
         {:name => field[:name], :value => field[:value_func].call(@owner)}
       end
     end
 
     def aggregate_data(assoc_name)
-      # TODO: Use an ordered indifferent hash here
+      # TODO: Use an ordered hash here
       assoc_name = assoc_name.to_sym
       if assoc_name == :all
         @owner.class.reflections.map{|name, assoc| aggregate_data(name)}.compact.flatten(1)

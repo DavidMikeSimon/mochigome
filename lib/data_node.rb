@@ -1,24 +1,15 @@
 require 'active_support'
 
 module Ernie
-  def self.hash_with_symbol_keys(h)
-    r = {}
-    h.each{|k,v| r[k.to_sym] = v}
-    r
-  end
-
   class DataNode < ActiveSupport::OrderedHash
     attr_accessor :type_name
     attr_reader :children
 
-    def initialize(type_name, content = {})
+    def initialize(type_name, content = [])
       # Convert content keys to symbols
-      # TODO Can I do this better with some kind of OrderedHashWithIndifferentAccess?
+      super()
       type_name = type_name.to_sym
-      unless content.keys.all?{|k| k.is_a?(Symbol)}
-        content = Ernie::hash_with_symbol_keys(content)
-      end
-      self.replace(content)
+      self.merge!(content)
       @type_name = type_name
       @children = []
     end

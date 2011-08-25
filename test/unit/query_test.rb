@@ -32,37 +32,38 @@ describe Ernie::Query do
     q = Ernie::Query.new([Category, Product])
     data_node = q.focused_on([])
     assert_empty data_node
+    assert_empty data_node.children
   end
 
   it "can build a one-layer DataNode" do
     q = Ernie::Query.new([Product])
     data_node = q.focused_on(@product_a)
-    assert_equal [@product_a], data_node.children_content
-    assert_empty data_node[@product_a].children_content
+    assert_equal [@product_a], data_node.children.map{|c| c[:obj]}
+    assert_empty data_node.children[0].children
   end
 
   it "can build a two-layer DataNode focused on a record with a belongs_to association" do
     q = Ernie::Query.new([Category, Product])
     data_node = q.focused_on(@product_a)
-    assert_equal [@category1], data_node.children_content
-    assert_equal [@product_a], data_node[@category1].children_content
-    assert_empty data_node[@category1][@product_a].children_content
+    assert_equal [@category1], data_node.children.map{|c| c[:obj]}
+    assert_equal [@product_a], data_node.children[0].children.map{|c| c[:obj]}
+    assert_empty data_node.children[0].children[0].children
   end
 
   it "can build a two-layer DataNode focused on an array of records in the second layer" do
     #FIXME: Sometimes an ordering error (try full test run w/ seed 10852)
     q = Ernie::Query.new([Category, Product])
     data_node = q.focused_on([@product_a, @product_d, @product_b])
-    assert_equal [@category1, @category2], data_node.children_content
-    assert_equal [@product_a, @product_b], data_node[@category1].children_content
-    assert_equal [@product_d], data_node[@category2].children_content
+    assert_equal [@category1, @category2], data_node.children.map{|c| c[:obj]}
+    assert_equal [@product_a, @product_b], data_node.children[0].children.map{|c| c[:obj]}
+    assert_equal [@product_d], data_node.children[1].children.map{|c| c[:obj]}
   end
 
   it "can build a two-layer DataNode focused on a record with a has_many association" do
     q = Ernie::Query.new([Category, Product])
     data_node = q.focused_on(@category1)
-    assert_equal [@category1], data_node.children_content
-    assert_equal [@product_a, @product_b], data_node[@category1].children_content
-    assert_empty data_node[@category1][@product_a].children_content
+    assert_equal [@category1], data_node.children.map{|c| c[:obj]}
+    assert_equal [@product_a, @product_b], data_node.children[0].children.map{|c| c[:obj]}
+    assert_empty data_node.children[0].children[0].children
   end
 end

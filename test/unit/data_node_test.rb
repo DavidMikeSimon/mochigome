@@ -6,7 +6,7 @@ describe Ernie::DataNode do
   end
 
   it "converts keys to symbols on creation" do
-    datanode = Ernie::DataNode.new(:foo, {"a" => 1, "b" => 2, :c => 3})
+    datanode = Ernie::DataNode.new(:foo, [{"a" => 1}, {"b" => 2}, {:c => 3}])
     assert_equal({:a => 1, :b => 2, :c => 3}, datanode)
   end
 
