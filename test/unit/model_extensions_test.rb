@@ -94,7 +94,7 @@ describe "an ActiveRecord model" do
       {:name => "a", :value => "abc"},
       {:name => "b", :value => "xyz"}
     ]
-    assert_equal expected, i.report_focus.data
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "has no report focus data if no fields are specified" do
@@ -102,7 +102,7 @@ describe "an ActiveRecord model" do
       acts_as_report_focus
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    assert_equal [], i.report_focus.data
+    assert_equal [], i.report_focus.field_data
   end
 
   it "can specify only some of its fields" do
@@ -115,7 +115,7 @@ describe "an ActiveRecord model" do
     expected = [
       {:name => "b", :value => "xyz"}
     ]
-    assert_equal expected, i.report_focus.data
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "can specify fields in a custom order" do
@@ -129,7 +129,7 @@ describe "an ActiveRecord model" do
       {:name => "b", :value => "xyz"},
       {:name => "a", :value => "abc"}
     ]
-    assert_equal expected, i.report_focus.data
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "can specify fields with multiple calls" do
@@ -144,7 +144,7 @@ describe "an ActiveRecord model" do
       {:name => "a", :value => "abc"},
       {:name => "b", :value => "xyz"}
     ]
-    assert_equal expected, i.report_focus.data
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "can specify fields with custom names" do
@@ -158,7 +158,7 @@ describe "an ActiveRecord model" do
       {:name => "Abraham", :value => "abc"},
       {:name => "Barcelona", :value => "xyz"}
     ]
-    assert_equal expected, i.report_focus.data
+    assert_equal expected, i.report_focus.field_data
   end
 
   it "can specify fields with custom implementations" do
@@ -168,7 +168,7 @@ describe "an ActiveRecord model" do
       end
     end
     i = @model_class.new(:a => "abc", :b => "xyz")
-    assert_equal [{:name => "concat", :value => "abcxyz"}], i.report_focus.data
+    assert_equal [{:name => "concat", :value => "abcxyz"}], i.report_focus.field_data
   end
 
   it "cannot call f.fields with nonsense" do
@@ -234,6 +234,12 @@ describe "an ActiveRecord model" do
     it "can collect aggregate data through all known associations with :all keyword" do
       assert_includes @product_a.report_focus.aggregate_data(:all),
         {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
+    end
+
+    it "returns both field data and all aggregate data with the data method" do
+      data = @product_a.report_focus.data
+      assert_includes data, {:name => 'sales_count', :value => 9} # W + Y (2 + 7)
+      assert_includes data, {:name => 'name', :value => "Product A"}
     end
   end
 end

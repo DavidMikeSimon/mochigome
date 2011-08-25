@@ -102,6 +102,10 @@ module Ernie
     end
 
     def data
+      field_data + aggregate_data(:all)
+    end
+
+    def field_data
       # TODO: Use an ordered hash here
       self.fields.map do |field|
         {:name => field[:name], :value => field[:value_func].call(@owner)}
