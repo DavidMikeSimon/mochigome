@@ -121,26 +121,23 @@ module Ernie
           h.merge! aggregate_data(name, options)
         end
       else
-        # TODO: Check if requested association is actually available
-        closest_assoc = @owner.class.reflections[assoc_name]
-        closest_assoc_object = @owner
-        tgt_class = closest_assoc.klass
-        if options.has_key?(:context)
+        assoc = @owner.class.reflections[assoc_name]
+        assoc_object = @owner
+        # TODO: Are there other ways context could matter besides :through assocs?
+        # TODO: What if a through reflection goes through _another_ through reflection?
+        if options.has_key?(:context) && assoc.through_reflection
+          # FIXME: This is too many queries
+          join_objs = assoc_object.send(assoc.through_reflection.name)
           options[:context].each do |obj|
-            # TODO: Probably should only care about plural associations
-            obj.class.reflect_on_all_associations.each do |assoc|
-              # TODO: Maybe should count recursive throughs and pick the shortest chain?
-              if assoc.klass == tgt_class && !assoc.through_reflection
-                closest_assoc = assoc
-                closest_assoc_object = obj
-              end
-            end
+            next unless join_objs.include?(obj)
+            assoc_object = obj
+            break
           end
         end
-        tgt_class.ernie_aggregations.each do |agg|
+        assoc.klass.ernie_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
           h["#{assoc_name}_#{agg[:name]}"] =
-            closest_assoc_object.send(closest_assoc.name).all(
+            assoc_object.send(assoc.name).all(
               :select => "(#{agg[:expr]}) AS erniecalc"
             ).first.erniecalc
         end
