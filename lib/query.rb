@@ -22,10 +22,25 @@ module Ernie
         new_layer = []
         assoc = Query.edge_assoc(cur_layer.first[:obj].class, cls)
         cur_layer.each do |datanode|
-          # FIXME: Don't assume that downards means plural association
-          datanode[:obj].send(assoc[:name]).each do |obj|
-            subnode = datanode << DataNode.new(obj.class.name, [{:obj => obj}])
-            new_layer << subnode
+          # FIXME: Don't assume that downwards means plural association
+          # TODO: Are there other ways context could matter besides :through assocs?
+          # i.e. If C belongs_to A and also belongs_to B, and layer_types = [A,B,C]
+          # TODO: What if a through reflection goes through _another_ through reflection?
+          if assoc.through_reflection
+            datanode[:obj].send(assoc.through_reflection.name).each do |through_obj|
+              # TODO: Don't assume that through means singular!
+              obj = through_obj.send(assoc.source_reflection.name)
+              subnode = datanode << DataNode.new(
+                obj.class.name, [{:obj => obj}, {:through_obj => through_obj}]
+              )
+              new_layer << subnode
+            end
+          else
+            #FIXME: Not DRY
+            datanode[:obj].send(assoc.name).each do |obj|
+              subnode = datanode << DataNode.new(obj.class.name, [{:obj => obj}])
+              new_layer << subnode
+            end
           end
         end
         cur_layer = new_layer
@@ -37,12 +52,16 @@ module Ernie
         assoc = Query.edge_assoc(root.children.first[:obj].class, cls)
         parent_children_map = ActiveSupport::OrderedHash.new
         root.children.each do |child|
-          parents = child[:obj].send(assoc[:name])
+          parents = child[:obj].send(assoc.name)
           parents = [parents] unless parents.is_a?(Enumerable)
           parents.each do |parent|
-            parent_children_map[parent.id] = DataNode.new(
-              parent.class.name, [{:obj => parent}]
-            ) unless parent_children_map.has_key?(parent.id)
+            unless parent_children_map.has_key?(parent.id)
+              attrs = [{:obj => parent}]
+              if assoc.through_reflection
+                attrs << {:through_obj => child[:obj].send(assoc.through_reflection.name)}
+              end
+              parent_children_map[parent.id] = DataNode.new(parent.class.name, attrs)
+            end
             parent_children_map[parent.id] << child
           end
         end
@@ -57,16 +76,17 @@ module Ernie
     private
 
     def focus_data_node_objs(node, obj_stack=[])
-      # TODO: As possible contexts, also need to include join models skipped by :through
-      pushed = false
+      pushed = 0
       if node.has_key?(:obj)
         obj = node.delete(:obj)
+        obj_stack.push(obj); pushed += 1
+        if node.has_key?(:through_obj)
+          obj_stack.push(node.delete(:through_obj)); pushed += 1
+        end
         node.merge!(obj.report_focus.data(:context => obj_stack))
-        obj_stack.push(obj)
-        pushed = true
       end
       node.children.each {|c| focus_data_node_objs(c)}
-      obj_stack.pop if pushed
+      pushed.times{ obj_stack.pop }
     end
 
     @@assoc_graph = nil
@@ -83,8 +103,7 @@ module Ernie
         cls.reflections.each do |name, assoc|
           if Ernie::reportFocusModels.include?(assoc.klass)
             @@assoc_graph.add_edge(cls, assoc.klass)
-            # Also keep track of the association details for each edge
-            @@edge_assocs[[cls, assoc.klass]] = {:name => name, :assoc => assoc}
+            @@edge_assocs[[cls, assoc.klass]] = assoc
           end
         end
       end

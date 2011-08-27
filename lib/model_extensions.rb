@@ -126,7 +126,7 @@ module Ernie
         # TODO: Are there other ways context could matter besides :through assocs?
         # TODO: What if a through reflection goes through _another_ through reflection?
         if options.has_key?(:context) && assoc.through_reflection
-          # FIXME: This is too many queries
+          # FIXME: This seems like it's repeating Query work
           join_objs = assoc_object.send(assoc.through_reflection.name)
           options[:context].each do |obj|
             next unless join_objs.include?(obj)
@@ -136,6 +136,7 @@ module Ernie
         end
         assoc.klass.ernie_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
+          # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
           h["#{assoc_name}_#{agg[:name]}"] =
             assoc_object.send(assoc.name).all(
               :select => "(#{agg[:expr]}) AS erniecalc"
