@@ -48,7 +48,6 @@ module Mochigome
       end
 
       # Take our tree so far and include it in parent trees, going up to the first layer
-      # TODO: Don't assume that upwards means singular association
       upwards_layers = @layer_types.take_while{|cls| !objs.first.is_a?(cls)}.reverse
       upwards_layers.each do |cls|
         assoc = Query.edge_assoc(root.children.first[:obj].class, cls)
