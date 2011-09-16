@@ -35,11 +35,8 @@ module Mochigome
     end
 
     # TODO: Only define xml-related methods if nokogiri loaded
-    # TODO: Use Nokogiri, not Builder!
     def to_xml
-      xml = Builder::XmlMarkup.new
-      append_xml_to(xml)
-      xml
+      Nokogiri::XML::Builder.new{|b| append_xml_to(b)}.to_xml
     end
 
     # TODO: Only define ruport-related methods if ruport is loaded
@@ -52,8 +49,9 @@ module Mochigome
     private
 
     def append_xml_to(x)
-      x.tag!(@type_name.to_s.camelize(:lower), has_key?(:id) ? {:id => self[:id]} : {}) do
-        each {|key, value| x.tag!(key.to_s.camelize(:lower), value)}
+      # Calling a Nokogiri Builder method named "whatever_" creates a tag "<whatever>"
+      x.send(@type_name.to_s.camelize(:lower) + "_", has_key?(:id) ? {:id => self[:id]} : {}) do
+        each {|key, value| next if key == 'id'; x.send(key.to_s.camelize(:lower) + "_", value)}
         @children.each {|child| child.send(:append_xml_to, x)}
       end
     end
