@@ -3,7 +3,7 @@ require 'rgl/adjacency'
 module Mochigome
   class Query
     def initialize(layer_types, name = "report")
-      # TODO: Validate layer types: not empty, act_as_mochigome_focus, graph correctly, no repeats
+      # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
       @name = name
     end
@@ -14,6 +14,7 @@ module Mochigome
       # TODO: Test for invalid objs (all objs not same type or not a layer type)
 
       # Start at the layer for objs, and descend downwards through layers after that
+      #TODO: It would be really fantastic if I could just use AR eager loading for this
       downwards_layers = @layer_types.drop_while{|cls| !objs.first.is_a?(cls)}
       root = DataNode.new(@name)
       root << objs.map{|obj| DataNode.new(obj.class.name, [{:obj => obj}])}
@@ -47,6 +48,7 @@ module Mochigome
       end
 
       # Take our tree so far and include it in parent trees, going up to the first layer
+      # TODO: Don't assume that upwards means singular association
       upwards_layers = @layer_types.take_while{|cls| !objs.first.is_a?(cls)}.reverse
       upwards_layers.each do |cls|
         assoc = Query.edge_assoc(root.children.first[:obj].class, cls)

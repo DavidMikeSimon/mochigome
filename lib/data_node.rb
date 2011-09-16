@@ -35,6 +35,7 @@ module Mochigome
     end
 
     # TODO: Only define xml-related methods if nokogiri loaded
+    # TODO: Use Nokogiri, not Builder!
     def to_xml
       xml = Builder::XmlMarkup.new
       append_xml_to(xml)
