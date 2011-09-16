@@ -1,5 +1,5 @@
 class Owner < ActiveRecord::Base
-  acts_as_report_focus do |f|
+  acts_as_mochigome_focus do |f|
     f.fields [:name]
   end
 

@@ -3,7 +3,7 @@ require 'rgl/adjacency'
 module Mochigome
   class Query
     def initialize(layer_types, name = "report")
-      # TODO: Validate layer types: not empty, act_as_report_focus, graph correctly, no repeats
+      # TODO: Validate layer types: not empty, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
       @name = name
     end
@@ -83,7 +83,7 @@ module Mochigome
         if node.has_key?(:through_obj)
           obj_stack.push(node.delete(:through_obj)); pushed += 1
         end
-        node.merge!(obj.report_focus.data(:context => obj_stack))
+        node.merge!(obj.mochigome_focus.data(:context => obj_stack))
       end
       node.children.each {|c| focus_data_node_objs(c)}
       pushed.times{ obj_stack.pop }

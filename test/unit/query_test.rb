@@ -44,7 +44,7 @@ describe Mochigome::Query do
   def assert_equal_objs(a, b)
     # Not checking aggregate data because we don't know abut a's context here
     a.zip(b).each do |obj, fields|
-      obj.report_focus.field_data.each do |k,v|
+      obj.mochigome_focus.field_data.each do |k,v|
         assert_equal v, fields[k]
       end
     end

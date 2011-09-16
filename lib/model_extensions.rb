@@ -16,9 +16,9 @@ module Mochigome
     end
 
     module ClassMethods
-      def acts_as_report_focus
+      def acts_as_mochigome_focus
         if self.try(:mochigome_focus_settings).try(:orig_class) == self
-          raise Mochigome::ModelSetupError.new("Already acts_as_report_focus for #{self.name}")
+          raise Mochigome::ModelSetupError.new("Already acts_as_mochigome_focus for #{self.name}")
         end
         settings = ReportFocusSettings.new(self)
         yield settings if block_given?
@@ -27,7 +27,7 @@ module Mochigome
         Mochigome::reportFocusModels << self
       end
 
-      def acts_as_report_focus?
+      def acts_as_mochigome_focus?
         !!mochigome_focus_settings
       end
 
@@ -43,9 +43,9 @@ module Mochigome
         'sum' => 'sum(%s)'
       }
 
-      def has_report_aggregations(aggregations)
+      def has_mochigome_aggregations(aggregations)
         unless aggregations.respond_to?(:each)
-          raise ModelSetupError.new "Call has_report_aggregations with an Enumerable"
+          raise ModelSetupError.new "Call has_mochigome_aggregations with an Enumerable"
         end
 
         def aggregation_expr(obj)
@@ -77,13 +77,13 @@ module Mochigome
         mochigome_aggregations.concat(additions)
       end
 
-      def has_report_aggregations?
+      def has_mochigome_aggregations?
         mochigome_aggregations.size > 0
       end
     end
 
     module InstanceMethods
-      def report_focus
+      def mochigome_focus
         ReportFocus.new(self, self.class.mochigome_focus_settings)
       end
     end

@@ -1,8 +1,8 @@
 class Product < ActiveRecord::Base
-  acts_as_report_focus do |f|
+  acts_as_mochigome_focus do |f|
     f.fields [:name, :price]
   end
-  has_report_aggregations [:average_price]
+  has_mochigome_aggregations [:average_price]
 
   belongs_to :category
   has_many :store_products
