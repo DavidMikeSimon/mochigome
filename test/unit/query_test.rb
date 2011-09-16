@@ -5,6 +5,9 @@ describe Mochigome::Query do
     @category1 = create(:category, :name => "Category 1")
     @product_a = create(:product, :name => "Product A", :category => @category1)
     @product_b = create(:product, :name => "Product B", :category => @category1)
+
+    # Belongs to a category, but fails Category's has_many(:products) conditions
+    @product_x = create(:product, :name => "Product X", :category => @category1, :categorized => false)
     
     @category2 = create(:category, :name => "Category 2")
     @product_c = create(:product, :name => "Product C", :category => @category2)
@@ -42,6 +45,7 @@ describe Mochigome::Query do
 
   # Convenience function to check DataSet output validity
   def assert_equal_objs(a, b)
+    assert_equal a.size, b.size
     # Not checking aggregate data because we don't know abut a's context here
     a.zip(b).each do |obj, fields|
       obj.mochigome_focus.field_data.each do |k,v|

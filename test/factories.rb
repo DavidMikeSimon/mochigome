@@ -4,6 +4,7 @@ FactoryGirl.define do
   factory :product do
     name 'LG Optimus V'
     price 19.95
+    categorized true
   end
 
   factory :category do

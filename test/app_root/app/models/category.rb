@@ -3,7 +3,7 @@ class Category < ActiveRecord::Base
     f.fields [:name]
   end
 
-  has_many :products
+  has_many :products, :conditions => {:categorized => true}
 
   validates_presence_of :name
 end
