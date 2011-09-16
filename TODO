@@ -3,3 +3,5 @@
   - Maybe can do this by adjusting the EffectivelyDated module so that when included it calls a hook on Mochigome that describes the possible filter on the effectively dated object (i.e. SectionRoster) as an SQL snippet referencing "SectionRoster" typed entries of the effective dates table.
 - Do as few queries as possible to accomplish stuff; this also encourages app to rely on SQL's 'IN' syntax and magical grouping/joining abilities to make aggregation easier
 - Replace all the TODOs and FIXMEs with whatever they're asking for (additional checks, use of ordered indifferent hashes instead of arrays of hashes, etc.)
+- If there is more than one association from model A to model B and they're both focusable, pick the one with no conditions. If all the associations have conditions, complain and require that the correct association be manually specified (where "correct" might mean none of them should be valid)
+  - Alternately, always ignore conditional associations unless they're specifically provided to Mochigome by the model
