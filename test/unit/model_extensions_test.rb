@@ -20,7 +20,7 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       acts_as_report_focus
     end
-    assert_raises Ernie::ModelSetupError do
+    assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_report_focus
       end
@@ -74,7 +74,7 @@ describe "an ActiveRecord model" do
   end
 
   it "cannot specify a nonsense group name" do
-    assert_raises Ernie::ModelSetupError do
+    assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_report_focus do |f|
           f.group_name 12345
@@ -169,14 +169,14 @@ describe "an ActiveRecord model" do
   end
 
   it "cannot call f.fields with nonsense" do
-    assert_raises Ernie::ModelSetupError do
+    assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_report_focus do |f|
           f.fields 123
         end
       end
     end
-    assert_raises Ernie::ModelSetupError do
+    assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_report_focus do |f|
           f.fields [789]
@@ -185,12 +185,12 @@ describe "an ActiveRecord model" do
     end
   end
 
-  it "appears in Ernie's global model list if it acts_as_report_focus" do
-    assert !Ernie.reportFocusModels.include?(@model_class)
+  it "appears in Mochigome's global model list if it acts_as_report_focus" do
+    assert !Mochigome.reportFocusModels.include?(@model_class)
     @model_class.class_eval do
       acts_as_report_focus
     end
-    assert Ernie.reportFocusModels.include?(@model_class)
+    assert Mochigome.reportFocusModels.include?(@model_class)
   end
 
   it "can specify aggregated data to be collected" do
@@ -202,7 +202,7 @@ describe "an ActiveRecord model" do
       {:name => "average_x", :expr => "avg(x)"},
       {:name => "Count", :expr => "count()"},
       {:name => "sum x", :expr => "sum(x)"}
-    ], @model_class.ernie_aggregations
+    ], @model_class.mochigome_aggregations
   end
 
   describe "with some aggregatable data" do

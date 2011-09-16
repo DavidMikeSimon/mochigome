@@ -1,6 +1,6 @@
 require 'rgl/adjacency'
 
-module Ernie
+module Mochigome
   class Query
     def initialize(layer_types, name = "report")
       # TODO: Validate layer types: not empty, act_as_report_focus, graph correctly, no repeats
@@ -97,11 +97,11 @@ module Ernie
 
       # Build a directed graph of the associations between focusable models
       @@assoc_graph = RGL::DirectedAdjacencyGraph.new
-      @@assoc_graph.add_vertices(*Ernie::reportFocusModels)
-      Ernie::reportFocusModels.each do |cls|
+      @@assoc_graph.add_vertices(*Mochigome::reportFocusModels)
+      Mochigome::reportFocusModels.each do |cls|
         # Add any associations that lead to other reportFocusModels
         cls.reflections.each do |name, assoc|
-          if Ernie::reportFocusModels.include?(assoc.klass)
+          if Mochigome::reportFocusModels.include?(assoc.klass)
             @@assoc_graph.add_edge(cls, assoc.klass)
             @@edge_assocs[[cls, assoc.klass]] = assoc
           end

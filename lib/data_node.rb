@@ -1,6 +1,6 @@
 require 'active_support'
 
-module Ernie
+module Mochigome
   class DataNode < ActiveSupport::OrderedHash
     attr_accessor :type_name
     attr_reader :children

@@ -1,23 +1,23 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
-describe Ernie::DataNode do
+describe Mochigome::DataNode do
   it "is a Hash" do
-    assert Ernie::DataNode.new(:foo).is_a?(Hash)
+    assert Mochigome::DataNode.new(:foo).is_a?(Hash)
   end
 
   it "converts keys to symbols on creation" do
-    datanode = Ernie::DataNode.new(:foo, [{"a" => 1}, {"b" => 2}, {:c => 3}])
+    datanode = Mochigome::DataNode.new(:foo, [{"a" => 1}, {"b" => 2}, {:c => 3}])
     assert_equal({:a => 1, :b => 2, :c => 3}, datanode)
   end
 
   it "converts its type_name to a symbol on creation" do
-    datanode = Ernie::DataNode.new("foo")
+    datanode = Mochigome::DataNode.new("foo")
     assert_equal :foo, datanode.type_name
   end
 
   describe "when created empty" do
     before do
-      @datanode = Ernie::DataNode.new(:data)
+      @datanode = Mochigome::DataNode.new(:data)
     end
 
     it "can merge content from an array of single-item hashes" do
@@ -27,43 +27,43 @@ describe Ernie::DataNode do
     end
 
     it "can have child nodes added to the top layer" do
-      @datanode << Ernie::DataNode.new(:subdata, {:a => 1, :b => 2})
-      @datanode << Ernie::DataNode.new(:subdata, {:a => 3, :b => 4})
+      @datanode << Mochigome::DataNode.new(:subdata, {:a => 1, :b => 2})
+      @datanode << Mochigome::DataNode.new(:subdata, {:a => 3, :b => 4})
       assert_equal 2, @datanode.children.size
       assert_equal({:a => 1, :b => 2}, @datanode.children.first)
     end
 
     it "can accept an array of children" do
       @datanode << [
-        Ernie::DataNode.new(:subdata, {:a => 1, :b => 2}),
-        Ernie::DataNode.new(:subdata, {:a => 3, :b => 4})
+        Mochigome::DataNode.new(:subdata, {:a => 1, :b => 2}),
+        Mochigome::DataNode.new(:subdata, {:a => 3, :b => 4})
       ]
       assert_equal 2, @datanode.children.size
       assert_equal({:a => 1, :b => 2}, @datanode.children.first)
     end
 
     it "can have items added at multiple layers" do
-      @datanode << Ernie::DataNode.new(:subdata, {:a => 1, :b => 2})
-      @datanode.children.first << Ernie::DataNode.new(:subsubdata, {:x => 10, :y => 20})
-      @datanode.children.first << Ernie::DataNode.new(:subsubdata, {:x => 100, :y => 200})
+      @datanode << Mochigome::DataNode.new(:subdata, {:a => 1, :b => 2})
+      @datanode.children.first << Mochigome::DataNode.new(:subsubdata, {:x => 10, :y => 20})
+      @datanode.children.first << Mochigome::DataNode.new(:subsubdata, {:x => 100, :y => 200})
       assert_equal 1, @datanode.children.size
       assert_equal 2, @datanode.children.first.size
       assert_equal({:x => 10, :y => 20}, @datanode.children.first.children.first)
     end
 
     it "cannot accept children that are not DataNodes" do
-      assert_raises Ernie::DataNodeError do
+      assert_raises Mochigome::DataNodeError do
         @datanode << {:x => 1, :y => 2}
       end
     end
 
     it "returns the new child DataNode(s) from a concatenation" do
-      new_child = @datanode << Ernie::DataNode.new(:subdata, {:a => 1})
+      new_child = @datanode << Mochigome::DataNode.new(:subdata, {:a => 1})
       assert_equal @datanode.children.first, new_child
 
       new_children = @datanode << [
-        Ernie::DataNode.new(:subdata, {:a => 1}),
-        Ernie::DataNode.new(:subdata, {:a => 2})
+        Mochigome::DataNode.new(:subdata, {:a => 1}),
+        Mochigome::DataNode.new(:subdata, {:a => 2})
       ]
       assert_equal @datanode.children.drop(1), new_children
     end
@@ -71,11 +71,11 @@ describe Ernie::DataNode do
 
   describe "when populated" do
     before do
-      @datanode = Ernie::DataNode.new(:abc)
+      @datanode = Mochigome::DataNode.new(:abc)
       @datanode.merge! [{:id => 400}, {:a => 1}, {:b => 2}, {:c => 3}]
-      xyz1 = @datanode << Ernie::DataNode.new(:xyz)
+      xyz1 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}]
-      xyz2 = @datanode << Ernie::DataNode.new(:xyz)
+      xyz2 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}]
     end
 

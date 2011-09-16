@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
-describe Ernie::Query do
+describe Mochigome::Query do
   before do
     @category1 = create(:category, :name => "Category 1")
     @product_a = create(:product, :name => "Product A", :category => @category1)
@@ -51,21 +51,21 @@ describe Ernie::Query do
   end
 
   it "returns an empty DataNode if no objects given" do
-    q = Ernie::Query.new([Category, Product])
+    q = Mochigome::Query.new([Category, Product])
     data_node = q.run([])
     assert_empty data_node
     assert_empty data_node.children
   end
 
   it "can build a one-layer DataNode" do
-    q = Ernie::Query.new([Product])
+    q = Mochigome::Query.new([Product])
     data_node = q.run(@product_a)
     assert_equal_objs [@product_a], data_node.children
     assert_empty data_node.children[0].children
   end
 
   it "can build a two-layer DataNode from a record with a belongs_to association" do
-    q = Ernie::Query.new([Category, Product])
+    q = Mochigome::Query.new([Category, Product])
     data_node = q.run(@product_a)
     assert_equal_objs [@category1], data_node.children
     assert_equal_objs [@product_a], data_node.children[0].children
@@ -73,7 +73,7 @@ describe Ernie::Query do
   end
 
   it "can build a two-layer DataNode from an array of records in the second layer" do
-    q = Ernie::Query.new([Category, Product])
+    q = Mochigome::Query.new([Category, Product])
     data_node = q.run([@product_a, @product_d, @product_b])
     assert_equal_objs [@category1, @category2], data_node.children
     assert_equal_objs [@product_a, @product_b], data_node.children[0].children
@@ -81,7 +81,7 @@ describe Ernie::Query do
   end
 
   it "can build a two-layer DataNode from a record with a has_many association" do
-    q = Ernie::Query.new([Category, Product])
+    q = Mochigome::Query.new([Category, Product])
     data_node = q.run(@category1)
     assert_equal_objs [@category1], data_node.children
     assert_equal_objs [@product_a, @product_b], data_node.children[0].children
@@ -89,7 +89,7 @@ describe Ernie::Query do
   end
 
   it "can build a three-layer DataNode from any layer" do
-    q = Ernie::Query.new([Owner, Store, Product])
+    q = Mochigome::Query.new([Owner, Store, Product])
     [
       [@john, @jane],
       [@store_x, @store_y, @store_z],
@@ -107,7 +107,7 @@ describe Ernie::Query do
   end
 
   it "collects aggregate data appropriately to the context of all layers" do
-    q = Ernie::Query.new([Owner, Store, Product])
+    q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@store_x, @store_y, @store_z])
     # Store X, Product C
     assert_equal 3, data_node.children[0].children[0].children[1]['sales_count']

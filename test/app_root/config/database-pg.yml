@@ -1,7 +1,7 @@
 test:
   adapter: postgresql
   encoding: unicode
-  database: ernie_test
+  database: mochigome_test
   pool: 5
   username: david
   password: foobar

@@ -4,8 +4,8 @@
 
 == Overview
 
-This gem allows for users to build custom reports based on their own requirements and the associations between your Rails mdels.
+Mochigome builds sophisticated report datasets from your ActiveRecord models.
 
-== Why Ernie?
+== Why "Mochigome"?
 
-Because BIRT[http://www.eclipse.org/birt/phoenix/] is evil! Or at least over-cumbersome for the scale of many projects.
+It means "sticky rice", a kind of rice where the grains tend to clump together. The Mochigome gem makes a bunch of ActiveRecord models clump together to form a single comprehensive report.

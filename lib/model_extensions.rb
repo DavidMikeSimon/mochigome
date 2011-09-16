@@ -1,4 +1,4 @@
-module Ernie
+module Mochigome
   @reportFocusModels = []
   def self.reportFocusModels
     @reportFocusModels
@@ -8,27 +8,27 @@ module Ernie
     def self.included(base)
       base.extend(ClassMethods)
 
-      base.write_inheritable_attribute :ernie_focus_settings, nil
-      base.class_inheritable_reader :ernie_focus_settings
+      base.write_inheritable_attribute :mochigome_focus_settings, nil
+      base.class_inheritable_reader :mochigome_focus_settings
 
-      base.write_inheritable_attribute :ernie_aggregations, []
-      base.class_inheritable_reader :ernie_aggregations
+      base.write_inheritable_attribute :mochigome_aggregations, []
+      base.class_inheritable_reader :mochigome_aggregations
     end
 
     module ClassMethods
       def acts_as_report_focus
-        if self.try(:ernie_focus_settings).try(:orig_class) == self
-          raise Ernie::ModelSetupError.new("Already acts_as_report_focus for #{self.name}")
+        if self.try(:mochigome_focus_settings).try(:orig_class) == self
+          raise Mochigome::ModelSetupError.new("Already acts_as_report_focus for #{self.name}")
         end
         settings = ReportFocusSettings.new(self)
         yield settings if block_given?
-        write_inheritable_attribute :ernie_focus_settings, settings
+        write_inheritable_attribute :mochigome_focus_settings, settings
         send(:include, InstanceMethods)
-        Ernie::reportFocusModels << self
+        Mochigome::reportFocusModels << self
       end
 
       def acts_as_report_focus?
-        !!ernie_focus_settings
+        !!mochigome_focus_settings
       end
 
       AGGREGATION_FUNCS = {
@@ -74,17 +74,17 @@ module Ernie
           else raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
           end
         end
-        ernie_aggregations.concat(additions)
+        mochigome_aggregations.concat(additions)
       end
 
       def has_report_aggregations?
-        ernie_aggregations.size > 0
+        mochigome_aggregations.size > 0
       end
     end
 
     module InstanceMethods
       def report_focus
-        ReportFocus.new(self, self.class.ernie_focus_settings)
+        ReportFocus.new(self, self.class.mochigome_focus_settings)
       end
     end
   end
@@ -134,13 +134,13 @@ module Ernie
             break
           end
         end
-        assoc.klass.ernie_aggregations.each do |agg|
+        assoc.klass.mochigome_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
           # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
           h["#{assoc_name}_#{agg[:name]}"] =
             assoc_object.send(assoc.name).all(
-              :select => "(#{agg[:expr]}) AS erniecalc"
-            ).first.erniecalc
+              :select => "(#{agg[:expr]}) AS mochigome_calc"
+            ).first.mochigome_calc
         end
       end
       h

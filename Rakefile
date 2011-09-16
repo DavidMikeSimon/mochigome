@@ -19,7 +19,7 @@ end
 desc 'Default: run unit and functional tests.'
 task :default => :test
 
-desc 'Test Ernie'
+desc 'Test Mochigome'
 Rake::TestTask.new(:test) do |t|
   common_test_settings(t)
 end
@@ -29,10 +29,10 @@ task :watchr do |t|
   exec 'watchr test/test.watchr'
 end
 
-desc 'Generate documentation for Ernie.'
+desc 'Generate documentation for Mochigome.'
 RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'Ernie'
+  rdoc.title    = 'Mochigome'
   rdoc.options << '--line-numbers' << '--inline-source'
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb')
@@ -53,14 +53,13 @@ end
 
 require 'lib/version'
 gemspec = Gem::Specification.new do |s|
-  s.name         = "ernie"
-  s.version      = Ernie::VERSION
+  s.name         = "mochigome"
+  s.version      = Mochigome::VERSION
   s.authors      = ["David Mike Simon"]
   s.email        = "david.mike.simon@gmail.com"
-  s.homepage     = "http://github.com/DavidMikeSimon/ernie"
+  s.homepage     = "http://github.com/DavidMikeSimon/mochigome"
   s.summary      = "User-customizable report generator"
-  s.description  = "Ernie lets your users customize their own Ruport report designs by combining developer-provided pieces"
-
+  s.description  = "Mochigome builds sophisticated report datasets from your ActiveRecord models"
   s.files        = `git ls-files .`.split("\n") - [".gitignore"]
   s.platform     = Gem::Platform::RUBY
   s.require_path = 'lib'
