@@ -1,5 +1,4 @@
 class Sale < ActiveRecord::Base
-  acts_as_mochigome_focus
   has_mochigome_aggregations [:count]
   
   belongs_to :store_product
