@@ -66,7 +66,6 @@ gemspec = Gem::Specification.new do |s|
   s.rubyforge_project = '[none]'
 
   s.add_dependency('ruport')
-  s.add_dependency('ruport-util')
   s.add_dependency('rgl')
 end
 
