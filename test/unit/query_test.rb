@@ -110,12 +110,14 @@ describe Mochigome::Query do
     end
   end
 
-  it "collects aggregate data appropriately to the context of all layers" do
+  it "collects aggregate data in the context of all layers when traversing down" do
     q = Mochigome::Query.new([Owner, Store, Product])
-    data_node = q.run([@store_x, @store_y, @store_z])
+    data_node = q.run([@john, @jane])
     # Store X, Product C
+    assert_equal "Product C", data_node.children[0].children[0].children[1]['name']
     assert_equal 3, data_node.children[0].children[0].children[1]['sales_count']
     # Store Z, Product C
+    assert_equal "Product C", data_node.children[1].children[1].children[0]['name']
     assert_equal 2, data_node.children[1].children[1].children[0]['sales_count']
   end
 

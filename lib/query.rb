@@ -70,19 +70,32 @@ module Mochigome
 
         parent_children_map = ActiveSupport::OrderedHash.new
         root.children.each do |child|
-          parents = child[:obj].send(assoc.name)
-          parents = [parents] unless parents.is_a?(Enumerable)
-          parents.each do |parent|
-            unless parent_children_map.has_key?(parent.id)
-              attrs = [{:obj => parent}]
-              if assoc.through_reflection
-                attrs << {:through_obj => child[:obj].send(assoc.through_reflection.name)}
+          if assoc.through_reflection
+            through_objs = child[:obj].send(assoc.through_reflection.name)
+            through_objs = [through_objs] unless through_objs.is_a?(Enumerable)
+            through_objs.each do |through_obj|
+              # TODO: Don't assume that through means singular!
+              parent = through_obj.send(assoc.source_reflection.name)
+              unless parent_children_map.has_key?(parent.id)
+                attrs = {:obj => parent, :through_obj => through_obj}
+                parent_children_map[parent.id] = DataNode.new(parent.class.name, attrs)
               end
-              parent_children_map[parent.id] = DataNode.new(parent.class.name, attrs)
+              parent_children_map[parent.id] << child.dup
             end
-            parent_children_map[parent.id] << child
+          else
+            #FIXME: Not DRY
+            parents = child[:obj].send(assoc.name)
+            parents = [parents] unless parents.is_a?(Enumerable)
+            parents.each do |parent|
+              unless parent_children_map.has_key?(parent.id)
+                attrs = {:obj => parent}
+                parent_children_map[parent.id] = DataNode.new(parent.class.name, attrs)
+              end
+              parent_children_map[parent.id] << child.dup
+            end
           end
         end
+
         root = DataNode.new(@name)
         root << parent_children_map.values
       end
