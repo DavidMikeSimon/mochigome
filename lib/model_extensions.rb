@@ -130,6 +130,7 @@ module Mochigome
           join_objs = assoc_object.send(assoc.through_reflection.name)
           options[:context].each do |obj|
             next unless join_objs.include?(obj)
+            assoc = assoc.source_reflection
             assoc_object = obj
             break
           end
@@ -137,7 +138,12 @@ module Mochigome
         assoc.klass.mochigome_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
           # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
-          row = assoc_object.send(assoc.name).first(:select => "(#{agg[:expr]}) AS x")
+          if assoc.belongs_to? # FIXME: or has_one
+            obj = assoc_object.send(assoc.name)
+            row = obj.class.find(obj.id, :select => "(#{agg[:expr]}) AS x")
+          else
+            row = assoc_object.send(assoc.name).first(:select => "(#{agg[:expr]}) AS x")
+          end
           h["#{assoc_name}_#{agg[:name]}"] = row.x
         end
       end
