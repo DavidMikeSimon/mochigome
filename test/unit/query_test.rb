@@ -119,7 +119,22 @@ describe Mochigome::Query do
     assert_equal 2, data_node.children[1].children[1].children[0]['sales_count']
   end
 
-  it "puts a comment on the root node indicating the association path" do
+  it "collects aggregate data in the context of all layers when traversing up" do
+    q = Mochigome::Query.new([Owner, Store, Product])
+    data_node = q.run(@product_c)
+    # Store X, Product C
+    assert_equal "Product C", data_node.children[0].children[0].children[0]['name']
+    assert_equal 3, data_node.children[0].children[0].children[0]['sales_count']
+    # Store Z, Product C
+    assert_equal "Product C", data_node.children[1].children[0].children[0]['name']
+    assert_equal 2, data_node.children[1].children[0].children[0]['sales_count']
+  end
+
+  it "collects aggregate data in the context of distant layers" do
+    # TODO: Implement me! I think this is necessary to justify focus_data_node_objs passing obj_stack
+  end
+
+  it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@store_x, @store_y, @store_z])
     c = data_node.comment
@@ -127,5 +142,26 @@ describe Mochigome::Query do
     assert_match c, /\nTime: \w{3} \w{3} \d+ .+\n/
     assert_match c, /\nLayers: Owner => Store => Product\n/
     assert_match c, /\nAR Association Path:\n\* <- Owner.+\n\* == Store.+\n\* -> Product.+\n/
+  end
+
+  it "puts a descriptive comment on the first node of each layer" do
+    q = Mochigome::Query.new([Owner, Store, Product])
+    data_node = q.run([@store_x, @store_y, @store_z])
+
+    owner_comment = data_node.children[0].comment
+    assert owner_comment
+    assert_nil data_node.children[1].comment # No comment on second owner
+
+    store_comment = data_node.children[0].children[0].comment
+    assert store_comment
+    assert_nil data_node.children[1].children[0].comment # No comment on second store
+
+    product_comment = data_node.children[0].children[0].children[0].comment
+    assert product_comment
+    assert_nil data_node.children[0].children[0].children[1].comment # No comment on 2nd product
+
+    [owner_comment, store_comment, product_comment].each do |comment|
+      assert_match comment, /^Context:\nOwner:#{@john.id}.*\n/ # Owner is always in context
+    end
   end
 end

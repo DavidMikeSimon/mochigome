@@ -42,7 +42,7 @@ module Mochigome
               # TODO: Don't assume that through means singular!
               obj = through_obj.send(assoc.source_reflection.name)
               subnode = datanode << DataNode.new(
-                obj.class.name, [{:obj => obj}, {:through_obj => through_obj}]
+                obj.class.name, {:obj => obj, :through_obj => through_obj}
               )
               new_layer << subnode
             end
@@ -96,13 +96,14 @@ module Mochigome
       eos
       root.comment.gsub!(/\n +/, "\n")
       root.comment.lstrip!
+
       focus_data_node_objs(root)
       return root
     end
 
     private
 
-    def focus_data_node_objs(node, obj_stack=[])
+    def focus_data_node_objs(node, obj_stack=[], commenting=true)
       pushed = 0
       if node.has_key?(:obj)
         obj = node.delete(:obj)
@@ -110,9 +111,19 @@ module Mochigome
         if node.has_key?(:through_obj)
           obj_stack.push(node.delete(:through_obj)); pushed += 1
         end
+        if commenting
+          node.comment = <<-eos
+            Context:
+            #{obj_stack.map{|o| "#{o.class.name}:#{o.id}"}.join("\n")}
+          eos
+          node.comment.gsub!(/\n +/, "\n")
+          node.comment.lstrip!
+        end
         node.merge!(obj.mochigome_focus.data(:context => obj_stack))
       end
-      node.children.each {|c| focus_data_node_objs(c)}
+      node.children.each_index do |i|
+        focus_data_node_objs(node.children[i], obj_stack, i == 0 && commenting)
+      end
       pushed.times{ obj_stack.pop }
     end
 
