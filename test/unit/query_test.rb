@@ -118,4 +118,14 @@ describe Mochigome::Query do
     # Store Z, Product C
     assert_equal 2, data_node.children[1].children[1].children[0]['sales_count']
   end
+
+  it "puts a comment on the root node indicating the association path" do
+    q = Mochigome::Query.new([Owner, Store, Product])
+    data_node = q.run([@store_x, @store_y, @store_z])
+    c = data_node.comment
+    assert_match c, /\nMochigome Version: #{Mochigome::VERSION}\n/
+    assert_match c, /\nQuery Ran: \w{3} \w{3} \d+ .+\n/
+    assert_match c, /\nLayers: Owner => Store => Product\n/
+    assert_match c, /\nAR Association Path:\n\* <- Owner.+\n\* == Store.+\n\* -> Product.+\n/
+  end
 end

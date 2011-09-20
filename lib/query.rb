@@ -11,7 +11,10 @@ module Mochigome
     def run(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
       return DataNode.new(@name) if objs.size == 0 # Empty DataNode for empty input
-      # TODO: Test for invalid objs (all objs not same type or not a layer type)
+      # TODO: Test for invalid objs (not all objs same type or not a layer type)
+
+      # Used to provide debugging information in the root DataNode comment
+      assoc_path = ["== #{objs.first.class.name} =="]
 
       # Start at the layer for objs, and descend downwards through layers after that
       #TODO: It would be really fantastic if I could just use AR eager loading for this
@@ -22,6 +25,13 @@ module Mochigome
       downwards_layers.drop(1).each do |cls|
         new_layer = []
         assoc = Query.edge_assoc(cur_layer.first[:obj].class, cls)
+
+        assoc_str = "-> #{cls.name} via #{cur_layer.first[:obj].class.name}##{assoc.name}"
+        if assoc.through_reflection
+          assoc_str << " (thru #{assoc.through_reflection.name})"
+        end
+        assoc_path.push assoc_str
+
         cur_layer.each do |datanode|
           # FIXME: Don't assume that downwards means plural association
           # TODO: Are there other ways context could matter besides :through assocs?
@@ -51,6 +61,13 @@ module Mochigome
       upwards_layers = @layer_types.take_while{|cls| !objs.first.is_a?(cls)}.reverse
       upwards_layers.each do |cls|
         assoc = Query.edge_assoc(root.children.first[:obj].class, cls)
+
+        assoc_str =  "<- #{cls.name} via #{root.children.first[:obj].class.name}##{assoc.name}"
+        if assoc.through_reflection
+          assoc_str << " (thru #{assoc.through_reflection.name})"
+        end
+        assoc_path.unshift assoc_str
+
         parent_children_map = ActiveSupport::OrderedHash.new
         root.children.each do |child|
           parents = child[:obj].send(assoc.name)
@@ -70,6 +87,15 @@ module Mochigome
         root << parent_children_map.values
       end
 
+      root.comment = <<-eos
+
+        Mochigome Version: #{Mochigome::VERSION}
+        Query Ran: #{Time.now}
+        Layers: #{@layer_types.map(&:name).join(" => ")}
+        AR Association Path:
+        #{assoc_path.map{|s| "* #{s}"}.join("\n")}
+      eos
+      root.comment.gsub!(/\n +/, "\n")
       focus_data_node_objs(root)
       return root
     end
