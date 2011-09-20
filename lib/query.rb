@@ -88,7 +88,7 @@ module Mochigome
       end
 
       root.comment = <<-eos
-        Mochigome Version: #{VERSION}
+        Mochigome Version: #{Mochigome::VERSION}
         Time: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
         AR Association Path:

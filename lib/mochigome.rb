@@ -1,4 +1,4 @@
-require 'version'
+require 'mochigome_ver'
 require 'exceptions'
 require 'data_node'
 require 'query'
