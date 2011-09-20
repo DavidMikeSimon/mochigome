@@ -137,10 +137,8 @@ module Mochigome
         assoc.klass.mochigome_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
           # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
-          h["#{assoc_name}_#{agg[:name]}"] =
-            assoc_object.send(assoc.name).all(
-              :select => "(#{agg[:expr]}) AS mochigome_calc"
-            ).first.mochigome_calc
+          row = assoc_object.send(assoc.name).first(:select => "(#{agg[:expr]}) AS x")
+          h["#{assoc_name}_#{agg[:name]}"] = row.x
         end
       end
       h
