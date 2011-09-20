@@ -81,6 +81,7 @@ describe Mochigome::DataNode do
   describe "when populated" do
     before do
       @datanode = Mochigome::DataNode.new(:abc)
+      @datanode.comment = "Foo"
       @datanode.merge! [{:id => 400}, {:a => 1}, {:b => 2}, {:c => 3}]
       xyz1 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}]
@@ -91,8 +92,15 @@ describe Mochigome::DataNode do
     it "can convert to an XML document with ids as attributes" do
       # Why stringify and reparse it? So that we could switch to another XML generator.
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
+
+      comment = doc.xpath('//abc/comment()').first
+      assert comment
+      assert comment.comment?
+      assert_equal "Foo", comment.content
+
       assert_equal "400", doc.xpath('//abc').first['id']
       assert_equal "2", doc.xpath('//abc/b').first.content
+
       xyz_nodes = doc.xpath('//abc/xyz')
       assert_equal "500", xyz_nodes.first['id']
       assert_equal "4", xyz_nodes[1].xpath(".//y").first.content

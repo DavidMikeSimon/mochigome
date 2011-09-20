@@ -38,7 +38,9 @@ module Mochigome
 
     # TODO: Only define xml-related methods if nokogiri loaded
     def to_xml
-      Nokogiri::XML::Builder.new{|b| append_xml_to(b)}.to_xml
+      doc = Nokogiri::XML::Document.new
+      append_xml_to(doc)
+      doc
     end
 
     # TODO: Only define ruport-related methods if ruport is loaded
@@ -51,11 +53,18 @@ module Mochigome
     private
 
     def append_xml_to(x)
-      # Calling a Nokogiri Builder method named "whatever_" creates a tag "<whatever>"
-      x.send(@type_name.to_s.camelize(:lower) + "_", has_key?(:id) ? {:id => self[:id]} : {}) do
-        each {|key, value| next if key == 'id'; x.send(key.to_s.camelize(:lower) + "_", value)}
-        @children.each {|child| child.send(:append_xml_to, x)}
+      doc = x.document
+      node = Nokogiri::XML::Node.new(@type_name.to_s.camelize(:lower), doc)
+      node["id"] = self[:id].to_s if has_key?(:id)
+      node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
+      each do |key, value|
+        next if key == 'id'
+        sub_node = Nokogiri::XML::Node.new(key.to_s.camelize(:lower), doc)
+        sub_node.content = value
+        node.add_child(sub_node)
       end
+      @children.each {|child| child.send(:append_xml_to, node)}
+      x.add_child(node)
     end
 
     def flat_column_names
