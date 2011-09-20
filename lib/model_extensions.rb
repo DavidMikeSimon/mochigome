@@ -76,10 +76,6 @@ module Mochigome
         end
         mochigome_aggregations.concat(additions)
       end
-
-      def has_mochigome_aggregations?
-        mochigome_aggregations.size > 0
-      end
     end
 
     module InstanceMethods
