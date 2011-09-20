@@ -164,9 +164,9 @@ module Mochigome
     def self.edge_assoc(u, v)
       assoc_graph # Make sure @@edge_assocs has been populated
       assoc = @@edge_assocs[[u,v]]
-      raise QueryError.new(
-        "No association between #{u} and #{v}"
-      ) unless assoc
+      unless assoc
+        raise QueryError.new("No association between #{u} and #{v}")
+      end
       return assoc
     end
   end

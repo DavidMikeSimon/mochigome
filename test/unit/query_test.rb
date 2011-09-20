@@ -68,7 +68,7 @@ describe Mochigome::Query do
     assert_empty data_node.children[0].children
   end
 
-  it "can build a two-layer DataNode from a record with a belongs_to association" do
+  it "can build a two-layer tree from a record with a belongs_to association" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run(@product_a)
     assert_equal_objs [@category1], data_node.children
@@ -76,7 +76,7 @@ describe Mochigome::Query do
     assert_empty data_node.children[0].children[0].children
   end
 
-  it "can build a two-layer DataNode from an array of records in the second layer" do
+  it "can build a two-layer tree from an array of records in the second layer" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run([@product_a, @product_d, @product_b])
     assert_equal_objs [@category1, @category2], data_node.children
@@ -84,7 +84,7 @@ describe Mochigome::Query do
     assert_equal_objs [@product_d], data_node.children[1].children
   end
 
-  it "can build a two-layer DataNode from a record with a has_many association" do
+  it "can build a two-layer tree from a record with a has_many association" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run(@category1)
     assert_equal_objs [@category1], data_node.children
@@ -92,7 +92,14 @@ describe Mochigome::Query do
     assert_empty data_node.children[0].children[0].children
   end
 
-  it "can build a three-layer DataNode from any layer" do
+  it "cannot build a DataNode tree when given disconnected layers" do
+    q = Mochigome::Query.new([Category, BoringDatum])
+    assert_raises Mochigome::QueryError do
+      data_node = q.run(@category1)
+    end
+  end
+
+  it "can build a three-layer tree from any layer" do
     q = Mochigome::Query.new([Owner, Store, Product])
     [
       [@john, @jane],
