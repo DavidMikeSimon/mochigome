@@ -88,14 +88,14 @@ module Mochigome
       end
 
       root.comment = <<-eos
-
-        Mochigome Version: #{Mochigome::VERSION}
-        Query Ran: #{Time.now}
+        Mochigome Version: #{VERSION}
+        Time: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
         AR Association Path:
         #{assoc_path.map{|s| "* #{s}"}.join("\n")}
       eos
       root.comment.gsub!(/\n +/, "\n")
+      root.comment.lstrip!
       focus_data_node_objs(root)
       return root
     end

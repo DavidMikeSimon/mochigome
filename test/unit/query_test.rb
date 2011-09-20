@@ -123,8 +123,8 @@ describe Mochigome::Query do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@store_x, @store_y, @store_z])
     c = data_node.comment
-    assert_match c, /\nMochigome Version: #{Mochigome::VERSION}\n/
-    assert_match c, /\nQuery Ran: \w{3} \w{3} \d+ .+\n/
+    assert_match c, /^Mochigome Version: #{Mochigome::VERSION}\n/
+    assert_match c, /\nTime: \w{3} \w{3} \d+ .+\n/
     assert_match c, /\nLayers: Owner => Store => Product\n/
     assert_match c, /\nAR Association Path:\n\* <- Owner.+\n\* == Store.+\n\* -> Product.+\n/
   end
