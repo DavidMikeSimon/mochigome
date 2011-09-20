@@ -51,7 +51,7 @@ RubyProf::ProfileTask.new(:profile) do |t|
   t.min_percent = 10
 end
 
-require 'lib/version'
+require 'lib/mochigome_ver'
 gemspec = Gem::Specification.new do |s|
   s.name         = "mochigome"
   s.version      = Mochigome::VERSION
