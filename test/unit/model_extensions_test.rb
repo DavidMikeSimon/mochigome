@@ -205,6 +205,24 @@ describe "an ActiveRecord model" do
     ], @model_class.mochigome_aggregations
   end
 
+  it "cannot call has_mochigome_aggregations with nonsense" do
+    assert_raises Mochigome::ModelSetupError do
+      @model_class.class_eval do
+        has_mochigome_aggregations 3
+      end
+    end
+    assert_raises Mochigome::ModelSetupError do
+      @model_class.class_eval do
+        has_mochigome_aggregations ["FLARGL!"]
+      end
+    end
+    assert_raises Mochigome::ModelSetupError do
+      @model_class.class_eval do
+        has_mochigome_aggregations [42]
+      end
+    end
+  end
+
   describe "with some aggregatable data" do
     before do
       @store1 = create(:store)
