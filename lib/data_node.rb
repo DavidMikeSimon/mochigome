@@ -3,6 +3,7 @@ require 'active_support'
 module Mochigome
   class DataNode < ActiveSupport::OrderedHash
     attr_accessor :type_name
+    attr_accessor :comment
     attr_reader :children
 
     def initialize(type_name, content = [])
@@ -11,6 +12,7 @@ module Mochigome
       type_name = type_name.to_sym
       self.merge!(content)
       @type_name = type_name
+      @comment = nil
       @children = []
     end
 

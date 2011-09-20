@@ -20,6 +20,15 @@ describe Mochigome::DataNode do
       @datanode = Mochigome::DataNode.new(:data)
     end
 
+    it "has no comment" do
+      assert_equal nil, @datanode.comment
+    end
+
+    it "can get a comment" do
+      @datanode.comment = "We are the Knights of Ni!"
+      assert_equal "We are the Knights of Ni!", @datanode.comment
+    end
+
     it "can merge content from an array of single-item hashes" do
       @datanode.merge! [{:foo => 42}, {"bar" => 84}]
       assert_equal 42, @datanode[:foo]
