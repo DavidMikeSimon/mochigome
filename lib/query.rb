@@ -120,10 +120,10 @@ module Mochigome
       pushed = 0
       if node.has_key?(:obj)
         obj = node.delete(:obj)
-        obj_stack.push(obj); pushed += 1
         if node.has_key?(:through_obj)
           obj_stack.push(node.delete(:through_obj)); pushed += 1
         end
+        obj_stack.push(obj); pushed += 1
         if commenting
           node.comment = <<-eos
             Context:
