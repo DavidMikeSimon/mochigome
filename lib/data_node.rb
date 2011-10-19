@@ -63,8 +63,11 @@ module Mochigome
         sub_node.content = value
         node.add_child(sub_node)
       end
-      @children.each {|child| child.send(:append_xml_to, node)}
+      heights = @children.map {|child| child.send(:append_xml_to, node)}
+      height = heights.empty? ? 0 : (heights.first + 1)
+      node["height"] = height.to_s
       x.add_child(node)
+      return height
     end
 
     def flat_column_names

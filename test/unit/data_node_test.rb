@@ -89,7 +89,7 @@ describe Mochigome::DataNode do
       xyz2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}]
     end
 
-    it "can convert to an XML document with ids as attributes" do
+    it "can convert to an XML document with ids and heights as attributes" do
       # Why stringify and reparse it? So that we could switch to another XML generator.
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
@@ -99,10 +99,13 @@ describe Mochigome::DataNode do
       assert_equal "Foo", comment.content
 
       assert_equal "400", doc.xpath('//abc').first['id']
+      assert_equal "1", doc.xpath('//abc').first['height']
       assert_equal "2", doc.xpath('//abc/b').first.content
 
       xyz_nodes = doc.xpath('//abc/xyz')
       assert_equal "500", xyz_nodes.first['id']
+      assert_equal "0", xyz_nodes[0]['height']
+      assert_equal "0", xyz_nodes[1]['height']
       assert_equal "4", xyz_nodes[1].xpath(".//y").first.content
     end
 
