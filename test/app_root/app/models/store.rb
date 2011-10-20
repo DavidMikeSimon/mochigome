@@ -1,6 +1,7 @@
 class Store < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
     f.fields [:name]
+    f.group_name "Storefront"
   end
 
   belongs_to :owner
