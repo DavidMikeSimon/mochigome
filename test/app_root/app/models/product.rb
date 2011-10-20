@@ -2,7 +2,10 @@ class Product < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
     f.fields [:name, :price]
   end
-  has_mochigome_aggregations [:average_price]
+  has_mochigome_aggregations [
+    :average_price,
+    {"Power level" => "9000+1"}
+  ]
 
   belongs_to :category
   has_many :store_products

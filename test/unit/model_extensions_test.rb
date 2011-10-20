@@ -219,15 +219,19 @@ describe "an ActiveRecord model" do
     ], @model_class.mochigome_aggregations
   end
 
+  it "can specify aggregations with custom SQL expressions" do
+    @model_class.class_eval do
+      has_mochigome_aggregations [{"The Answer" => "7*6"}]
+    end
+    assert_equal [
+      {:name => "The Answer", :expr => "7*6"}
+    ], @model_class.mochigome_aggregations
+  end
+
   it "cannot call has_mochigome_aggregations with nonsense" do
     assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         has_mochigome_aggregations 3
-      end
-    end
-    assert_raises Mochigome::ModelSetupError do
-      @model_class.class_eval do
-        has_mochigome_aggregations ["FLARGL!"]
       end
     end
     assert_raises Mochigome::ModelSetupError do
@@ -280,6 +284,11 @@ describe "an ActiveRecord model" do
     it "can return data aggregated in the context through the data method" do
       focus = @product_a.mochigome_focus
       assert_equal 2, focus.data(:context => [@sp1A])['Sales count']
+    end
+
+    it "can return data aggregated using a custom sql expression" do
+      focus = @store1.mochigome_focus
+      assert_equal 9001, focus.data(:context => [@sp1A])['Power level']
     end
   end
 end

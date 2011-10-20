@@ -61,6 +61,7 @@ module Mochigome
                 end
               end
             end
+            return obj # Assume the string is just a plain SQL expression
           end
           raise ModelSetupError.new "Invalid aggregation expr: #{obj.inspect}"
         end
