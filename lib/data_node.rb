@@ -44,7 +44,7 @@ module Mochigome
     end
 
     # TODO: Only define ruport-related methods if ruport is loaded
-    def to_ruport_table
+    def to_flat_ruport_table
       table = Ruport::Data::Table.new(:column_names => flat_column_names)
       append_rows_to(table)
       table
@@ -54,12 +54,14 @@ module Mochigome
 
     def append_xml_to(x)
       doc = x.document
-      node = Nokogiri::XML::Node.new(@type_name.to_s.camelize(:lower), doc)
+      node = Nokogiri::XML::Node.new("node", doc)
+      node["type"] = @type_name.to_s.camelize(:lower)
       node["id"] = self[:id].to_s if has_key?(:id)
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
         next if key == 'id'
-        sub_node = Nokogiri::XML::Node.new(key.to_s.camelize(:lower), doc)
+        sub_node = Nokogiri::XML::Node.new("datum", doc)
+        sub_node["name"] = key.to_s.camelize(:lower)
         sub_node.content = value
         node.add_child(sub_node)
       end

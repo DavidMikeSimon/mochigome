@@ -93,24 +93,24 @@ describe Mochigome::DataNode do
       # Why stringify and reparse it? So that we could switch to another XML generator.
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
-      comment = doc.xpath('//abc/comment()').first
+      comment = doc.xpath('/node[@type="abc"]/comment()').first
       assert comment
       assert comment.comment?
       assert_equal "Foo", comment.content
 
-      assert_equal "400", doc.xpath('//abc').first['id']
-      assert_equal "1", doc.xpath('//abc').first['height']
-      assert_equal "2", doc.xpath('//abc/b').first.content
+      assert_equal "400", doc.xpath('/node[@type="abc"]').first['id']
+      assert_equal "1", doc.xpath('/node').first['height']
+      assert_equal "2", doc.xpath('/node/datum[@name="b"]').first.content
 
-      xyz_nodes = doc.xpath('//abc/xyz')
+      xyz_nodes = doc.xpath('/node/node[@type="xyz"]')
       assert_equal "500", xyz_nodes.first['id']
       assert_equal "0", xyz_nodes[0]['height']
       assert_equal "0", xyz_nodes[1]['height']
-      assert_equal "4", xyz_nodes[1].xpath(".//y").first.content
+      assert_equal "4", xyz_nodes[1].xpath('./datum[@name="y"]').first.content
     end
 
     it "can convert to a flattened Ruport table" do
-      table = @datanode.to_ruport_table
+      table = @datanode.to_flat_ruport_table
       titles = [
         "abc::id",
         "abc::a",
