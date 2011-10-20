@@ -20,7 +20,7 @@ module Mochigome
       #TODO: It would be really fantastic if I could just use AR eager loading for this
       downwards_layers = @layer_types.drop_while{|cls| !objs.first.is_a?(cls)}
       root = DataNode.new(@name)
-      root << objs.map{|obj| DataNode.new(obj.mochigome_focus.group_name, [{:obj => obj}])}
+      root << objs.map{|obj| DataNode.new(obj.mochigome_focus.name, [{:obj => obj}])}
       cur_layer = root.children
       downwards_layers.drop(1).each do |cls|
         new_layer = []
@@ -42,14 +42,14 @@ module Mochigome
               # TODO: Don't assume that through means singular!
               obj = through_obj.send(assoc.source_reflection.name)
               subnode = datanode << DataNode.new(
-                obj.mochigome_focus.group_name, {:obj => obj, :through_obj => through_obj}
+                obj.mochigome_focus.name, {:obj => obj, :through_obj => through_obj}
               )
               new_layer << subnode
             end
           else
             #FIXME: Not DRY
             datanode[:obj].send(assoc.name).each do |obj|
-              subnode = datanode << DataNode.new(obj.mochigome_focus.group_name, [{:obj => obj}])
+              subnode = datanode << DataNode.new(obj.mochigome_focus.name, [{:obj => obj}])
               new_layer << subnode
             end
           end
@@ -78,7 +78,7 @@ module Mochigome
               parent = through_obj.send(assoc.source_reflection.name)
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent, :through_obj => through_obj}
-                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.group_name, attrs)
+                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.name, attrs)
               end
               parent_children_map[parent.id] << child.dup
             end
@@ -89,7 +89,7 @@ module Mochigome
             parents.each do |parent|
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent}
-                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.group_name, attrs)
+                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.name, attrs)
               end
               parent_children_map[parent.id] << child.dup
             end

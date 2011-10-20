@@ -88,12 +88,12 @@ module Mochigome
   private
 
   class ReportFocus
-    attr_reader :group_name
+    attr_reader :name
     attr_reader :fields
 
     def initialize(owner, settings)
       @owner = owner
-      @group_name = settings.options[:group_name] || owner.class.name
+      @name = settings.options[:name] || owner.class.name
       @fields = settings.options[:fields] || []
     end
 
@@ -157,11 +157,11 @@ module Mochigome
       @options[:fields] = []
     end
 
-    def group_name(n)
+    def name(n)
       unless n.is_a?(String)
-        raise ModelSetupError.new "Call f.group_name with a String"
+        raise ModelSetupError.new "Call f.name with a String"
       end
-      @options[:group_name] = n
+      @options[:name] = n
     end
 
     def fields(fields)

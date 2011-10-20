@@ -30,28 +30,28 @@ describe "an ActiveRecord model" do
   it "inherits a parent's report focus settings" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.group_name "Foobar"
+        f.name "Foobar"
       end
     end
     @sub_class = Class.new(@model_class)
     i = @sub_class.new
-    assert_equal "Foobar", i.mochigome_focus.group_name
+    assert_equal "Foobar", i.mochigome_focus.name
   end
 
   it "can override a parent's report focus settings" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.group_name "Foobar"
+        f.name "Foobar"
       end
     end
     @sub_class = Class.new(@model_class)
     @sub_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.group_name "Narfbork"
+        f.name "Narfbork"
       end
     end
     i = @sub_class.new
-    assert_equal "Narfbork", i.mochigome_focus.group_name
+    assert_equal "Narfbork", i.mochigome_focus.name
   end
   
   it "uses its class name as the default group name" do
@@ -60,24 +60,24 @@ describe "an ActiveRecord model" do
       acts_as_mochigome_focus
     end
     i = Foobar.new
-    assert_equal "Foobar", i.mochigome_focus.group_name.split("::").last
+    assert_equal "Foobar", i.mochigome_focus.name.split("::").last
   end
 
   it "can override the default group name" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.group_name "Thingie"
+        f.name "Thingie"
       end
     end
     i = @model_class.new
-    assert_equal "Thingie", i.mochigome_focus.group_name
+    assert_equal "Thingie", i.mochigome_focus.name
   end
 
   it "cannot specify a nonsense group name" do
     assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_mochigome_focus do |f|
-          f.group_name 12345
+          f.name 12345
         end
       end
     end

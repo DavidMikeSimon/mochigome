@@ -10,9 +10,9 @@ describe Mochigome::DataNode do
     assert_equal({:a => 1, :b => 2, :c => 3}, datanode)
   end
 
-  it "converts its type_name to a symbol on creation" do
-    datanode = Mochigome::DataNode.new("foo")
-    assert_equal :foo, datanode.type_name
+  it "converts its type_name to a string on creation" do
+    datanode = Mochigome::DataNode.new(:foo)
+    assert_equal "foo", datanode.type_name
   end
 
   describe "when created empty" do

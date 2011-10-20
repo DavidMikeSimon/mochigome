@@ -9,9 +9,8 @@ module Mochigome
     def initialize(type_name, content = [])
       # Convert content keys to symbols
       super()
-      type_name = type_name.to_sym
       self.merge!(content)
-      @type_name = type_name
+      @type_name = type_name.to_s
       @comment = nil
       @children = []
     end
@@ -55,7 +54,7 @@ module Mochigome
     def append_xml_to(x)
       doc = x.document
       node = Nokogiri::XML::Node.new("node", doc)
-      node["type"] = @type_name.to_s.camelize(:lower)
+      node["type"] = @type_name.camelize(:lower)
       node["id"] = self[:id].to_s if has_key?(:id)
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
