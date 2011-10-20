@@ -48,34 +48,33 @@ module Mochigome
           raise ModelSetupError.new "Call has_mochigome_aggregations with an Enumerable"
         end
 
-        def aggregation_expr(obj)
-          if obj.is_a?(String)
+        def aggregation_opts(obj)
+          if obj.is_a?(String) or obj.is_a?(Symbol)
+            obj = obj.to_s
             AGGREGATION_FUNCS.each do |func, expr_pat|
               if expr_pat.include?('%s')
                 if obj =~ /^#{func}[-_ ](.+)/i
-                  return (expr_pat % $1)
+                  return {:expr => (expr_pat % $1)}
                 end
               else
                 if obj.downcase == func
-                  return expr_pat
+                  return {:expr => expr_pat}
                 end
               end
             end
-            return obj # Assume the string is just a plain SQL expression
+            return {:expr => obj} # Assume the string is just a plain SQL expression
+          elsif obj.is_a?(Array) and obj.size == 2
+            return {:conditions => obj[1]}.merge(aggregation_opts(obj[0]))
           end
           raise ModelSetupError.new "Invalid aggregation expr: #{obj.inspect}"
         end
 
         additions = aggregations.map do |f|
           case f
-          when String, Symbol then {
-            :name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")],
-            :expr => aggregation_expr(f.to_s)
-          }
-          when Hash then {
-            :name => f.keys.first.to_s,
-            :expr => aggregation_expr(f.values.first.to_s)
-          }
+          when String, Symbol then
+            {:name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")]}.merge(aggregation_opts(f))
+          when Hash then
+            {:name => f.keys.first.to_s}.merge(aggregation_opts(f.values.first))
           else raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
           end
         end
@@ -139,11 +138,13 @@ module Mochigome
         assoc.klass.mochigome_aggregations.each do |agg|
           # TODO: There *must* be a better way to do this query
           # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
+          sel_expr = "(#{agg[:expr]}) AS x"
+          cond_expr = agg[:conditions] ? agg[:conditions] : "1=1"
           if assoc.belongs_to? # FIXME: or has_one
             obj = assoc_object.send(assoc.name)
-            row = obj.class.find(obj.id, :select => "(#{agg[:expr]}) AS x")
+            row = obj.class.find(obj.id, :select => sel_expr, :conditions => cond_expr)
           else
-            row = assoc_object.send(assoc.name).first(:select => "(#{agg[:expr]}) AS x")
+            row = assoc_object.send(assoc.name).first(:select => sel_expr, :conditions => cond_expr)
           end
           h[agg[:name]] = row.x
         end

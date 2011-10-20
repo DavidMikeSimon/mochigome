@@ -213,7 +213,6 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       has_mochigome_aggregations [{"Mean X" => "avg x"}]
     end
-    # Peeking in past API to make sure it set the expressions correctly
     assert_equal [
       {:name => "Mean X", :expr => "avg(x)"}
     ], @model_class.mochigome_aggregations
@@ -225,6 +224,15 @@ describe "an ActiveRecord model" do
     end
     assert_equal [
       {:name => "The Answer", :expr => "7*6"}
+    ], @model_class.mochigome_aggregations
+  end
+
+  it "can specify aggregations with custom conditions" do
+    @model_class.class_eval do
+      has_mochigome_aggregations [{"Blue Sales" => ["count", "color='blue'"]}]
+    end
+    assert_equal [
+      {:name => "Blue Sales", :expr => "count()", :conditions => "color='blue'"}
     ], @model_class.mochigome_aggregations
   end
 
@@ -288,7 +296,12 @@ describe "an ActiveRecord model" do
 
     it "can return data aggregated using a custom sql expression" do
       focus = @store1.mochigome_focus
-      assert_equal 9001, focus.data(:context => [@sp1A])['Power level']
+      assert_equal 9001, focus.data['Power level']
+    end
+
+    it "can return data aggregated using custom conditions" do
+      focus = @store1.mochigome_focus
+      assert_equal 1, focus.data['Expensive products']
     end
   end
 end
