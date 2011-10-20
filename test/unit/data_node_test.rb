@@ -80,9 +80,9 @@ describe Mochigome::DataNode do
 
   describe "when populated" do
     before do
-      @datanode = Mochigome::DataNode.new(:abc)
+      @datanode = Mochigome::DataNode.new(:acme_corp)
       @datanode.comment = "Foo"
-      @datanode.merge! [{:id => 400}, {:a => 1}, {:b => 2}, {:c => 3}]
+      @datanode.merge! [{:id => 400}, {:apples => 1}, {:box_cutters => 2}, {:can_openers => 3}]
       xyz1 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}]
       xyz2 = @datanode << Mochigome::DataNode.new(:xyz)
@@ -93,29 +93,29 @@ describe Mochigome::DataNode do
       # Why stringify and reparse it? So that we could switch to another XML generator.
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
-      comment = doc.xpath('/node[@type="abc"]/comment()').first
+      comment = doc.xpath('/node[@type="Acme Corp"]/comment()').first
       assert comment
       assert comment.comment?
       assert_equal "Foo", comment.content
 
-      assert_equal "400", doc.xpath('/node[@type="abc"]').first['id']
+      assert_equal "400", doc.xpath('/node[@type="Acme Corp"]').first['id']
       assert_equal "1", doc.xpath('/node').first['height']
-      assert_equal "2", doc.xpath('/node/datum[@name="b"]').first.content
+      assert_equal "2", doc.xpath('/node/datum[@name="Box Cutters"]').first.content
 
-      xyz_nodes = doc.xpath('/node/node[@type="xyz"]')
+      xyz_nodes = doc.xpath('/node/node[@type="Xyz"]')
       assert_equal "500", xyz_nodes.first['id']
       assert_equal "0", xyz_nodes[0]['height']
       assert_equal "0", xyz_nodes[1]['height']
-      assert_equal "4", xyz_nodes[1].xpath('./datum[@name="y"]').first.content
+      assert_equal "4", xyz_nodes[1].xpath('./datum[@name="Y"]').first.content
     end
 
     it "can convert to a flattened Ruport table" do
       table = @datanode.to_flat_ruport_table
       titles = [
-        "abc::id",
-        "abc::a",
-        "abc::b",
-        "abc::c",
+        "acme_corp::id",
+        "acme_corp::apples",
+        "acme_corp::box_cutters",
+        "acme_corp::can_openers",
         "xyz::id",
         "xyz::x",
         "xyz::y",

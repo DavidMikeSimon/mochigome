@@ -54,13 +54,13 @@ module Mochigome
     def append_xml_to(x)
       doc = x.document
       node = Nokogiri::XML::Node.new("node", doc)
-      node["type"] = @name.camelize(:lower)
+      node["type"] = @name.titleize
       node["id"] = self[:id].to_s if has_key?(:id)
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
         next if key == 'id'
         sub_node = Nokogiri::XML::Node.new("datum", doc)
-        sub_node["name"] = key.to_s.camelize(:lower)
+        sub_node["name"] = key.to_s.titleize
         sub_node.content = value
         node.add_child(sub_node)
       end
