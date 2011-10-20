@@ -6,6 +6,11 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       set_table_name :fake
     end
+    Whale = @model_class
+  end
+
+  after do
+    Object.send(:remove_const, :Whale)
   end
 
   it "indicates if it acts_as_mochigome_focus or not" do
@@ -55,12 +60,11 @@ describe "an ActiveRecord model" do
   end
   
   it "uses its class name as the default group name" do
-    Foobar = @model_class 
-    Foobar.class_eval do
+    @model_class.class_eval do
       acts_as_mochigome_focus
     end
-    i = Foobar.new
-    assert_equal "Foobar", i.mochigome_focus.name.split("::").last
+    i = @model_class.new
+    assert_equal "Whale", i.mochigome_focus.name.split("::").last
   end
 
   it "can override the default group name" do
@@ -199,9 +203,19 @@ describe "an ActiveRecord model" do
     end
     # Peeking in past API to make sure it set the expressions correctly
     assert_equal [
-      {:name => "average_x", :expr => "avg(x)"},
-      {:name => "Count", :expr => "count()"},
-      {:name => "sum x", :expr => "sum(x)"}
+      {:name => "Whales average x", :expr => "avg(x)"},
+      {:name => "Whales Count", :expr => "count()"},
+      {:name => "Whales sum x", :expr => "sum(x)"}
+    ], @model_class.mochigome_aggregations
+  end
+
+  it "can specify aggregations with custom names" do
+    @model_class.class_eval do
+      has_mochigome_aggregations [{"Mean X" => "avg x"}]
+    end
+    # Peeking in past API to make sure it set the expressions correctly
+    assert_equal [
+      {:name => "Mean X", :expr => "avg(x)"}
     ], @model_class.mochigome_aggregations
   end
 
@@ -244,28 +258,28 @@ describe "an ActiveRecord model" do
     end
 
     it "can collect aggregate data from a report focus through an association" do
-      assert_equal 9, @product_a.mochigome_focus.aggregate_data('sales')['sales_count']
-      assert_equal 7, @product_b.mochigome_focus.aggregate_data('sales')['sales_count']
+      assert_equal 9, @product_a.mochigome_focus.aggregate_data('sales')['Sales count']
+      assert_equal 7, @product_b.mochigome_focus.aggregate_data('sales')['Sales count']
     end
 
     it "can collect aggregate data through all known associations with :all keyword" do
-      assert_equal 9, @product_a.mochigome_focus.aggregate_data(:all)['sales_count']
+      assert_equal 9, @product_a.mochigome_focus.aggregate_data(:all)['Sales count']
     end
 
     it "returns both field data and all aggregate data with the data method" do
       data = @product_a.mochigome_focus.data
-      assert_equal 9, data['sales_count']
+      assert_equal 9, data['Sales count']
       assert_equal "Product A", data['name']
     end
 
     it "can return data aggregated in the context of another class with similar assoc" do
       focus = @product_a.mochigome_focus
-      assert_equal 2, focus.aggregate_data('sales', :context => [@sp1A])['sales_count']
+      assert_equal 2, focus.aggregate_data('sales', :context => [@sp1A])['Sales count']
     end
 
     it "can return data aggregated in the context through the data method" do
       focus = @product_a.mochigome_focus
-      assert_equal 2, focus.data(:context => [@sp1A])['sales_count']
+      assert_equal 2, focus.data(:context => [@sp1A])['Sales count']
     end
   end
 end

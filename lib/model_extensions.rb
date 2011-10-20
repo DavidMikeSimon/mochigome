@@ -68,8 +68,12 @@ module Mochigome
         additions = aggregations.map do |f|
           case f
           when String, Symbol then {
-            :name => f.to_s,
+            :name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")],
             :expr => aggregation_expr(f.to_s)
+          }
+          when Hash then {
+            :name => f.keys.first.to_s,
+            :expr => aggregation_expr(f.values.first.to_s)
           }
           else raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
           end
@@ -140,7 +144,7 @@ module Mochigome
           else
             row = assoc_object.send(assoc.name).first(:select => "(#{agg[:expr]}) AS x")
           end
-          h["#{assoc_name}_#{agg[:name]}"] = row.x
+          h[agg[:name]] = row.x
         end
       end
       h

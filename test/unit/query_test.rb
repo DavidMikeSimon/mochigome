@@ -128,10 +128,10 @@ describe Mochigome::Query do
     data_node = q.run([@john, @jane])
     # Store X, Product C
     assert_equal "Product C", data_node.children[0].children[0].children[1]['name']
-    assert_equal 3, data_node.children[0].children[0].children[1]['sales_count']
+    assert_equal 3, data_node.children[0].children[0].children[1]['Sales count']
     # Store Z, Product C
     assert_equal "Product C", data_node.children[1].children[1].children[0]['name']
-    assert_equal 2, data_node.children[1].children[1].children[0]['sales_count']
+    assert_equal 2, data_node.children[1].children[1].children[0]['Sales count']
   end
 
   it "collects aggregate data in the context of all layers when traversing up" do
@@ -139,10 +139,10 @@ describe Mochigome::Query do
     data_node = q.run(@product_c)
     # Store X, Product C
     assert_equal "Product C", data_node.children[0].children[0].children[0]['name']
-    assert_equal 3, data_node.children[0].children[0].children[0]['sales_count']
+    assert_equal 3, data_node.children[0].children[0].children[0]['Sales count']
     # Store Z, Product C
     assert_equal "Product C", data_node.children[1].children[0].children[0]['name']
-    assert_equal 2, data_node.children[1].children[0].children[0]['sales_count']
+    assert_equal 2, data_node.children[1].children[0].children[0]['Sales count']
   end
 
   it "collects aggregate data in the context of distant layers" do
