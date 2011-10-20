@@ -71,7 +71,7 @@ describe Mochigome::Query do
   it "uses the model focus's group name for the DataNode's type name" do
     q = Mochigome::Query.new([Store])
     data_node = q.run(@store_x)
-    assert_equal "Storefront", data_node.children[0].type_name.to_s
+    assert_equal "Storefront", data_node.children[0].name.to_s
   end
 
   it "can build a two-layer tree from a record with a belongs_to association" do

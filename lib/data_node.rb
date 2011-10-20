@@ -2,15 +2,15 @@ require 'active_support'
 
 module Mochigome
   class DataNode < ActiveSupport::OrderedHash
-    attr_accessor :type_name
+    attr_accessor :name
     attr_accessor :comment
     attr_reader :children
 
-    def initialize(type_name, content = [])
+    def initialize(name, content = [])
       # Convert content keys to symbols
       super()
       self.merge!(content)
-      @type_name = type_name.to_s
+      @name = name.to_s
       @comment = nil
       @children = []
     end
@@ -54,7 +54,7 @@ module Mochigome
     def append_xml_to(x)
       doc = x.document
       node = Nokogiri::XML::Node.new("node", doc)
-      node["type"] = @type_name.camelize(:lower)
+      node["type"] = @name.camelize(:lower)
       node["id"] = self[:id].to_s if has_key?(:id)
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
@@ -72,7 +72,7 @@ module Mochigome
     end
 
     def flat_column_names
-      colnames = keys.map {|key| "#{@type_name}::#{key}"}
+      colnames = keys.map {|key| "#{@name}::#{key}"}
       if @children.size > 0
         # All children should have the same content keys
         colnames += @children.first.send(:flat_column_names)
