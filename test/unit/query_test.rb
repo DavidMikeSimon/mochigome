@@ -74,6 +74,12 @@ describe Mochigome::Query do
     assert_equal "Storefront", data_node.children[0].name.to_s
   end
 
+  it "adds an internal_name attribute containing the model class's name" do
+    q = Mochigome::Query.new([Store])
+    data_node = q.run(@store_x)
+    assert_equal "Store", data_node.children[0][:internal_name]
+  end
+
   it "can build a two-layer tree from a record with a belongs_to association" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run(@product_a)

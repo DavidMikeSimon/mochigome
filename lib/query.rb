@@ -133,6 +133,7 @@ module Mochigome
           node.comment.lstrip!
         end
         node.merge!(obj.mochigome_focus.data(:context => obj_stack))
+        node[:internal_name] = obj.class.name
       end
       node.children.each_index do |i|
         focus_data_node_objs(node.children[i], obj_stack, i == 0 && commenting)
