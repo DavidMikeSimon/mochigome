@@ -55,10 +55,11 @@ module Mochigome
       doc = x.document
       node = Nokogiri::XML::Node.new("node", doc)
       node["type"] = @name.titleize
-      node["id"] = self[:id].to_s if has_key?(:id)
+      [:id, :internal_type].each do |attr|
+        node[attr.to_s] = delete(attr).to_s if has_key?(attr)
+      end
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
-        next if key == 'id'
         sub_node = Nokogiri::XML::Node.new("datum", doc)
         sub_node["name"] = key.to_s.titleize
         sub_node.content = value

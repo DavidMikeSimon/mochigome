@@ -84,12 +84,12 @@ describe Mochigome::DataNode do
       @datanode.comment = "Foo"
       @datanode.merge! [{:id => 400}, {:apples => 1}, {:box_cutters => 2}, {:can_openers => 3}]
       xyz1 = @datanode << Mochigome::DataNode.new(:xyz)
-      xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}]
+      xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Whatsit"}]
       xyz2 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}]
     end
 
-    it "can convert to an XML document with ids as attributes" do
+    it "can convert to an XML document with ids and types as attributes" do
       # Why stringify and reparse it? So that we could switch to another XML generator.
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
@@ -103,6 +103,7 @@ describe Mochigome::DataNode do
 
       xyz_nodes = doc.xpath('/node/node[@type="Xyz"]')
       assert_equal "500", xyz_nodes.first['id']
+      assert_equal "Whatsit", xyz_nodes.first['internal_type']
       assert_equal "4", xyz_nodes[1].xpath('./datum[@name="Y"]').first.content
     end
 
@@ -116,11 +117,12 @@ describe Mochigome::DataNode do
         "xyz::id",
         "xyz::x",
         "xyz::y",
-        "xyz::z"
+        "xyz::z",
+        "xyz::internal_type"
       ]
       assert_equal titles, table.column_names
-      assert_equal [400, 1, 2, 3, 500, 9, 8, 7], table.data[0].to_a
-      assert_equal [400, 1, 2, 3, 600, 5, 4, 8734], table.data[1].to_a
+      assert_equal [400, 1, 2, 3, 500, 9, 8, 7, "Whatsit"], table.data[0].to_a
+      assert_equal [400, 1, 2, 3, 600, 5, 4, 8734, nil], table.data[1].to_a
     end
   end
 end
