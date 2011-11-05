@@ -49,6 +49,13 @@ module Mochigome
       table
     end
 
+    def to_flat_arrays
+      table = []
+      table << flat_column_names
+      append_rows_to(table)
+      table
+    end
+
     private
 
     def append_xml_to(x)
@@ -80,6 +87,7 @@ module Mochigome
       colnames
     end
 
+    # TODO: Should handle trickier situations involving datanodes not having various columns
     def append_rows_to(table, stack = [])
       stack.push values
       if @children.size > 0

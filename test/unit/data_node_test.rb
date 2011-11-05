@@ -87,6 +87,18 @@ describe Mochigome::DataNode do
       xyz1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Whatsit"}]
       xyz2 = @datanode << Mochigome::DataNode.new(:xyz)
       xyz2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}]
+
+      @titles = [
+        "acme_corp::id",
+        "acme_corp::apples",
+        "acme_corp::box_cutters",
+        "acme_corp::can_openers",
+        "xyz::id",
+        "xyz::x",
+        "xyz::y",
+        "xyz::z",
+        "xyz::internal_type"
+      ]
     end
 
     it "can convert to an XML document with ids and types as attributes" do
@@ -109,20 +121,16 @@ describe Mochigome::DataNode do
 
     it "can convert to a flattened Ruport table" do
       table = @datanode.to_flat_ruport_table
-      titles = [
-        "acme_corp::id",
-        "acme_corp::apples",
-        "acme_corp::box_cutters",
-        "acme_corp::can_openers",
-        "xyz::id",
-        "xyz::x",
-        "xyz::y",
-        "xyz::z",
-        "xyz::internal_type"
-      ]
-      assert_equal titles, table.column_names
+      assert_equal @titles, table.column_names
       assert_equal [400, 1, 2, 3, 500, 9, 8, 7, "Whatsit"], table.data[0].to_a
       assert_equal [400, 1, 2, 3, 600, 5, 4, 8734, nil], table.data[1].to_a
+    end
+
+    it "can convert to a flat array of arrays" do
+      a = @datanode.to_flat_arrays
+      assert_equal @titles, a[0]
+      assert_equal [400, 1, 2, 3, 500, 9, 8, 7, "Whatsit"], a[1]
+      assert_equal [400, 1, 2, 3, 600, 5, 4, 8734], a[2]
     end
   end
 end
