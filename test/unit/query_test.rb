@@ -185,4 +185,18 @@ describe Mochigome::Query do
       assert_match comment, /^Context:\nOwner:#{@john.id}.*\n/ # Owner is always in context
     end
   end
+
+  it "will not allow a query on targets of different types" do
+    q = Mochigome::Query.new([Owner, Store, Product])
+    assert_raises Mochigome::QueryError do
+      q.run([@store_x, @john])
+    end
+  end
+
+  it "will not allow a query on targets not in the layer list" do
+    q = Mochigome::Query.new([Product])
+    assert_raises Mochigome::QueryError do
+      q.run(@category1)
+    end
+  end
 end

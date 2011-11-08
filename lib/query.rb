@@ -11,7 +11,14 @@ module Mochigome
     def run(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
       return DataNode.new(@name) if objs.size == 0 # Empty DataNode for empty input
-      # TODO: Test for invalid objs (not all objs same type or not a layer type)
+
+      unless objs.all?{|obj| obj.class == objs.first.class}
+        raise QueryError.new("Query target objects must all be the same type")
+      end
+
+      unless @layer_types.any?{|layer| objs.first.is_a?(layer)}
+        raise QueryError.new("Query target object type must be in the query layer list")
+      end
 
       # Used to provide debugging information in the root DataNode comment
       assoc_path = ["== #{objs.first.class.name} =="]
