@@ -1,6 +1,7 @@
 source :rubygems
 
 gem 'rails', '2.3.12'
+gem 'arel'
 gem 'nokogiri'
 gem 'ruport'
 gem 'rgl'

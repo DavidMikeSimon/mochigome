@@ -11,6 +11,7 @@ GEM
     activeresource (2.3.12)
       activesupport (= 2.3.12)
     activesupport (2.3.12)
+    arel (2.2.1)
     autowatchr (0.1.5)
       watchr
     color (1.4.1)
@@ -56,6 +57,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  arel
   autowatchr
   factory_girl (= 2.0.4)
   minitest

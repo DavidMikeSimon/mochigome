@@ -58,7 +58,7 @@ describe "an ActiveRecord model" do
     i = @sub_class.new
     assert_equal "Narfbork", i.mochigome_focus.name
   end
-  
+
   it "uses its class name as the default group name" do
     @model_class.class_eval do
       acts_as_mochigome_focus
@@ -199,14 +199,18 @@ describe "an ActiveRecord model" do
 
   it "can specify aggregated data to be collected" do
     @model_class.class_eval do
-      has_mochigome_aggregations [:average_x, :Count, "sum x"]
+      has_mochigome_aggregations [
+        :average_x,
+        :Count,
+        {"bloo" => :sum_x}
+      ]
     end
-    # Peeking in past API to make sure it set the expressions correctly
+    # The actual effectiveness of these lambdas will be tested in query_test.
     assert_equal [
-      {:name => "Whales average x", :expr => "avg(x)"},
-      {:name => "Whales Count", :expr => "count()"},
-      {:name => "Whales sum x", :expr => "sum(x)"}
-    ], @model_class.mochigome_aggregations
+      "Whales average x",
+      "Whales Count",
+      "Whales sum x"
+    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
   end
 
   it "can specify aggregations with custom names" do
@@ -214,26 +218,17 @@ describe "an ActiveRecord model" do
       has_mochigome_aggregations [{"Mean X" => "avg x"}]
     end
     assert_equal [
-      {:name => "Mean X", :expr => "avg(x)"}
-    ], @model_class.mochigome_aggregations
+      "Mean X"
+    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
   end
 
-  it "can specify aggregations with custom SQL expressions" do
+  it "can specify aggregations with custom arel expressions" do
     @model_class.class_eval do
-      has_mochigome_aggregations [{"The Answer" => "7*6"}]
+      has_mochigome_aggregations [{"The Answer" => lambda{|r| }}]
     end
     assert_equal [
-      {:name => "The Answer", :expr => "7*6"}
-    ], @model_class.mochigome_aggregations
-  end
-
-  it "can specify aggregations with custom conditions" do
-    @model_class.class_eval do
-      has_mochigome_aggregations [{"Blue Sales" => ["count", "color='blue'"]}]
-    end
-    assert_equal [
-      {:name => "Blue Sales", :expr => "count()", :conditions => "color='blue'"}
-    ], @model_class.mochigome_aggregations
+      "The Answer"
+    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
   end
 
   it "cannot call has_mochigome_aggregations with nonsense" do
@@ -249,59 +244,7 @@ describe "an ActiveRecord model" do
     end
   end
 
-  describe "with some aggregatable data" do
-    before do
-      @store1 = create(:store)
-      @store2 = create(:store)
-      @product_a = create(:product, :name => "Product A", :price => 30)
-      @product_b = create(:product, :name => "Product B", :price => 50)
-      @sp1A = create(:store_product, :store => @store1, :product => @product_a)
-      @sp1B = create(:store_product, :store => @store1, :product => @product_b)
-      @sp2A = create(:store_product, :store => @store2, :product => @product_a)
-      @sp2B = create(:store_product, :store => @store2, :product => @product_b)
-      [
-        [2, @sp1A],
-        [4, @sp1B],
-        [7, @sp2A],
-        [3, @sp2B]
-      ].each do |num, sp|
-        num.times { create(:sale, :store_product => sp) }
-      end
-    end
-
-    it "can collect aggregate data from a report focus through an association" do
-      assert_equal 9, @product_a.mochigome_focus.aggregate_data('sales')['Sales count']
-      assert_equal 7, @product_b.mochigome_focus.aggregate_data('sales')['Sales count']
-    end
-
-    it "can collect aggregate data through all known associations with :all keyword" do
-      assert_equal 9, @product_a.mochigome_focus.aggregate_data(:all)['Sales count']
-    end
-
-    it "returns both field data and all aggregate data with the data method" do
-      data = @product_a.mochigome_focus.data
-      assert_equal 9, data['Sales count']
-      assert_equal "Product A", data['name']
-    end
-
-    it "can return data aggregated in the context of another class with similar assoc" do
-      focus = @product_a.mochigome_focus
-      assert_equal 2, focus.aggregate_data('sales', :context => [@sp1A])['Sales count']
-    end
-
-    it "can return data aggregated in the context through the data method" do
-      focus = @product_a.mochigome_focus
-      assert_equal 2, focus.data(:context => [@sp1A])['Sales count']
-    end
-
-    it "can return data aggregated using a custom sql expression" do
-      focus = @store1.mochigome_focus
-      assert_equal 9001, focus.data['Power level']
-    end
-
-    it "can return data aggregated using custom conditions" do
-      focus = @store1.mochigome_focus
-      assert_equal 1, focus.data['Expensive products']
-    end
+  it "can convert an association into an arel relation" do
+    flunk
   end
 end

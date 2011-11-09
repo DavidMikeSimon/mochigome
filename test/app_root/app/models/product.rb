@@ -4,8 +4,7 @@ class Product < ActiveRecord::Base
   end
   has_mochigome_aggregations [
     :average_price,
-    {"Power level" => "9000+1"},
-    {"Expensive products" => [:count, "price > 40"]}
+    {"Power level" => lambda{|r| i_am_so_broken}}
   ]
 
   belongs_to :category

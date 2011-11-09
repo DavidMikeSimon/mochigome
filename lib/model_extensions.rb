@@ -32,53 +32,66 @@ module Mochigome
       end
 
       AGGREGATION_FUNCS = {
-        'count' => 'count()',
-        'distinct' => 'count(distinct %s)',
-        'average' => 'avg(%s)',
-        'avg' => 'avg(%s)',
-        'minimum' => 'min(%s)',
-        'min' => 'min(%s)',
-        'maximum' => 'max(%s)',
-        'max' => 'max(%s)',
-        'sum' => 'sum(%s)'
+        :count => lambda{|r| r[:id].count},
+        :distinct => lambda{|r,c| r[c].count(true)},
+        :average => lambda{|r,c| r[c].average},
+        :avg => :average,
+        :minimum => lambda{|r,c| r[c].minimum},
+        :min => :minimum,
+        :maximum => lambda{|r,c| r[c].maximum},
+        :max => :maximum,
+        :sum => lambda{|r,c| r[c].sum}
       }
 
       def has_mochigome_aggregations(aggregations)
-        unless aggregations.respond_to?(:each)
+        unless aggregations.is_a?(Enumerable)
           raise ModelSetupError.new "Call has_mochigome_aggregations with an Enumerable"
         end
 
-        def aggregation_opts(obj)
-          if obj.is_a?(String) or obj.is_a?(Symbol)
-            obj = obj.to_s
-            AGGREGATION_FUNCS.each do |func, expr_pat|
-              if expr_pat.include?('%s')
-                if obj =~ /^#{func}[-_ ](.+)/i
-                  return {:expr => (expr_pat % $1)}
-                end
-              else
-                if obj.downcase == func
-                  return {:expr => expr_pat}
-                end
-              end
-            end
-            return {:expr => obj} # Assume the string is just a plain SQL expression
-          elsif obj.is_a?(Array) and obj.size == 2
-            return {:conditions => obj[1]}.merge(aggregation_opts(obj[0]))
-          end
-          raise ModelSetupError.new "Invalid aggregation expr: #{obj.inspect}"
-        end
-
-        additions = aggregations.map do |f|
+        mochigome_aggregations.concat(aggregations.map {|f|
           case f
           when String, Symbol then
-            {:name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")]}.merge(aggregation_opts(f))
+            {
+              :name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")],
+              :proc => aggregation_proc(f)
+            }
           when Hash then
-            {:name => f.keys.first.to_s}.merge(aggregation_opts(f.values.first))
-          else raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
+            {
+              :name => f.keys.first.to_s,
+              :proc => aggregation_proc(f.values.first)
+            }
+          else
+            raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
           end
+        })
+      end
+
+      private
+
+      # Given an object, tries to coerce it into a proc that takes a relation
+      # and returns an expression node to collect some data from that relation.
+      def aggregation_proc(obj)
+        return obj if obj.is_a?(Proc)
+        args = if obj.is_a?(Symbol) || obj.is_a?(String)
+          obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
+        elsif obj.is_a?(Enumerable)
+          obj.clone # Going to enclose args, so we need it to stay unchanged
+        else
+          raise ModelSetupError.new "Invalid aggregation proc: #{obj.inspect}"
         end
-        mochigome_aggregations.concat(additions)
+        func_name = args.shift
+        func = AGGREGATION_FUNCS[func_name]
+        func = AGGREGATION_FUNCS[func] if func.is_a?(Symbol) # Alias lookup
+        unless func
+          raise ModelSetupError.new "Invalid function name: #{func_name}"
+        end
+        unless args.size == func.arity-1
+          raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
+        end
+        return lambda{|r| func.call(*([r] + args))} # Closure! Huzzah.
+      end
+
+      def assoc_to_rel(assoc_name)
       end
     end
 
@@ -109,45 +122,6 @@ module Mochigome
       h = ActiveSupport::OrderedHash.new
       self.fields.each do |field|
         h[field[:name]] = field[:value_func].call(@owner)
-      end
-      h
-    end
-
-    def aggregate_data(assoc_name, options = {})
-      h = ActiveSupport::OrderedHash.new
-      assoc_name = assoc_name.to_sym
-      if assoc_name == :all
-        @owner.class.reflections.each do |name, assoc|
-          h.merge! aggregate_data(name, options)
-        end
-      else
-        assoc = @owner.class.reflections[assoc_name]
-        assoc_object = @owner
-        # TODO: Are there other ways context could matter besides :through assocs?
-        # TODO: What if a through reflection goes through _another_ through reflection?
-        if options.has_key?(:context) && assoc.through_reflection
-          # FIXME: This seems like it's repeating Query work
-          join_objs = assoc_object.send(assoc.through_reflection.name)
-          options[:context].each do |obj|
-            next unless join_objs.include?(obj)
-            assoc = assoc.source_reflection
-            assoc_object = obj
-            break
-          end
-        end
-        assoc.klass.mochigome_aggregations.each do |agg|
-          # TODO: There *must* be a better way to do this query
-          # It's ugly, involves an ActiveRecord creation, and causes lots of DB hits
-          sel_expr = "(#{agg[:expr]}) AS x"
-          cond_expr = agg[:conditions] ? agg[:conditions] : "1=1"
-          if assoc.belongs_to? # FIXME: or has_one
-            obj = assoc_object.send(assoc.name)
-            row = obj.class.find(obj.id, :select => sel_expr, :conditions => cond_expr)
-          else
-            row = assoc_object.send(assoc.name).first(:select => sel_expr, :conditions => cond_expr)
-          end
-          h[agg[:name]] = row.x
-        end
       end
       h
     end
