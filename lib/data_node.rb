@@ -92,7 +92,7 @@ module Mochigome
 
     # TODO: Should handle trickier situations involving datanodes not having various columns
     def append_rows_to(table, stack = [])
-      stack.push ([@name] + values)
+      stack.push([@name] + values)
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, stack)}
       else
