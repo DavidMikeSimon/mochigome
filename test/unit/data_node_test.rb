@@ -87,7 +87,8 @@ describe Mochigome::DataNode do
       emp1 = @datanode << Mochigome::DataNode.new(:employee, :alice)
       emp1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Cyborg"}]
       emp2 = @datanode << Mochigome::DataNode.new(:employee, :bob)
-      emp2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}]
+      emp2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}, {:internal_type => "Human"}]
+      emp2 << Mochigome::DataNode.new(:pet, :lassie)
 
       @titles = [
         "corporation::name",
@@ -100,7 +101,8 @@ describe Mochigome::DataNode do
         "employee::x",
         "employee::y",
         "employee::z",
-        "employee::internal_type"
+        "employee::internal_type",
+        "pet::name"
       ]
     end
 
@@ -121,21 +123,22 @@ describe Mochigome::DataNode do
       assert_equal "alice", emp_nodes.first['name']
       assert_equal "bob", emp_nodes.last['name']
       assert_equal "Cyborg", emp_nodes.first['internal_type']
-      assert_equal "4", emp_nodes[1].xpath('./datum[@name="Y"]').first.content
+      assert_equal "4", emp_nodes.last.xpath('./datum[@name="Y"]').first.content
+      assert_equal "lassie", emp_nodes.last.xpath('node').first['name']
     end
 
     it "can convert to a flattened Ruport table" do
       table = @datanode.to_flat_ruport_table
       assert_equal @titles, table.column_names
-      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500,  9, 8, 7, "Cyborg"], table.data[0].to_a
-      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, nil], table.data[1].to_a
+      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500,  9, 8, 7, "Cyborg", nil], table.data[0].to_a
+      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, "Human", "lassie"], table.data[1].to_a
     end
 
     it "can convert to a flat array of arrays" do
       a = @datanode.to_flat_arrays
       assert_equal @titles, a[0]
-      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500, 9, 8, 7, "Cyborg"], a[1]
-      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734], a[2]
+      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500, 9, 8, 7, "Cyborg", nil], a[1]
+      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, "Human", "lassie"], a[2]
     end
   end
 end

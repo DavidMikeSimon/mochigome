@@ -46,15 +46,17 @@ module Mochigome
 
     # TODO: Only define ruport-related methods if ruport is loaded
     def to_flat_ruport_table
-      table = Ruport::Data::Table.new(:column_names => flat_column_names)
-      append_rows_to(table)
+      col_names = flat_column_names
+      table = Ruport::Data::Table.new(:column_names => col_names)
+      append_rows_to(table, col_names.size)
       table
     end
 
     def to_flat_arrays
       table = []
-      table << flat_column_names
-      append_rows_to(table)
+      col_names = flat_column_names
+      table << col_names
+      append_rows_to(table, col_names.size)
       table
     end
 
@@ -81,22 +83,22 @@ module Mochigome
       x.add_child(node)
     end
 
+    # TODO: Should handle trickier situations involving datanodes not having various columns
     def flat_column_names
       colnames = (["name"] + keys).map {|key| "#{@type_name}::#{key}"}
-      if @children.size > 0
-        # All children should have the same content keys
-        colnames += @children.first.send(:flat_column_names)
-      end
+      choices = @children.map(&:flat_column_names)
+      colnames += choices.max_by(&:size) || []
       colnames
     end
 
     # TODO: Should handle trickier situations involving datanodes not having various columns
-    def append_rows_to(table, stack = [])
+    def append_rows_to(table, pad, stack = [])
       stack.push([@name] + values)
       if @children.size > 0
-        @children.each {|child| child.send(:append_rows_to, table, stack)}
+        @children.each {|child| child.send(:append_rows_to, table, pad, stack)}
       else
-        table << stack.flatten(1)
+        row = stack.flatten(1)
+        table << (row + Array.new(pad - row.size, nil))
       end
       stack.pop
     end
