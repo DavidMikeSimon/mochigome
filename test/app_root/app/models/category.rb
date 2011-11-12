@@ -1,7 +1,5 @@
 class Category < ActiveRecord::Base
-  acts_as_mochigome_focus do |f|
-    f.fields [:name]
-  end
+  acts_as_mochigome_focus
 
   has_many :products, :conditions => {:categorized => true}
 

@@ -46,7 +46,7 @@ describe Mochigome::Query do
   # Convenience function to check DataSet output validity
   def assert_equal_objs(a, b)
     assert_equal a.size, b.size
-    # Not checking aggregate data because we don't know abut a's context here
+    # Not checking aggregate data because we don't know about a's context here
     a.zip(b).each do |obj, fields|
       obj.mochigome_focus.field_data.each do |k,v|
         assert_equal v, fields[k]
@@ -68,10 +68,10 @@ describe Mochigome::Query do
     assert_empty data_node.children[0].children
   end
 
-  it "uses the model focus's group name for the DataNode's type name" do
+  it "uses the model focus's type name for the DataNode's type name" do
     q = Mochigome::Query.new([Store])
     data_node = q.run(@store_x)
-    assert_equal "Storefront", data_node.children[0].name.to_s
+    assert_equal "Storefront", data_node.children[0].type_name.to_s
   end
 
   it "adds an internal_type attribute containing the model class's name" do
@@ -133,10 +133,10 @@ describe Mochigome::Query do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@john, @jane])
     # Store X, Product C
-    assert_equal "Product C", data_node.children[0].children[0].children[1]['name']
+    assert_equal "Product C", data_node.children[0].children[0].children[1].name
     assert_equal 3, data_node.children[0].children[0].children[1]['Sales count']
     # Store Z, Product C
-    assert_equal "Product C", data_node.children[1].children[1].children[0]['name']
+    assert_equal "Product C", data_node.children[1].children[1].children[0].name
     assert_equal 2, data_node.children[1].children[1].children[0]['Sales count']
   end
 
@@ -144,10 +144,10 @@ describe Mochigome::Query do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run(@product_c)
     # Store X, Product C
-    assert_equal "Product C", data_node.children[0].children[0].children[0]['name']
+    assert_equal "Product C", data_node.children[0].children[0].children[0].name
     assert_equal 3, data_node.children[0].children[0].children[0]['Sales count']
     # Store Z, Product C
-    assert_equal "Product C", data_node.children[1].children[0].children[0]['name']
+    assert_equal "Product C", data_node.children[1].children[0].children[0].name
     assert_equal 2, data_node.children[1].children[0].children[0]['Sales count']
   end
 

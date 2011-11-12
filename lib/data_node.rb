@@ -2,14 +2,16 @@ require 'active_support'
 
 module Mochigome
   class DataNode < ActiveSupport::OrderedHash
+    attr_accessor :type_name
     attr_accessor :name
     attr_accessor :comment
     attr_reader :children
 
-    def initialize(name, content = [])
+    def initialize(type_name, name, content = [])
       # Convert content keys to symbols
       super()
       self.merge!(content)
+      @type_name = type_name.to_s
       @name = name.to_s
       @comment = nil
       @children = []
@@ -61,7 +63,8 @@ module Mochigome
     def append_xml_to(x)
       doc = x.document
       node = Nokogiri::XML::Node.new("node", doc)
-      node["type"] = @name.titleize
+      node["type"] = @type_name.titleize
+      node["name"] = @name
       [:id, :internal_type].each do |attr|
         node[attr.to_s] = delete(attr).to_s if has_key?(attr)
       end
@@ -79,7 +82,7 @@ module Mochigome
     end
 
     def flat_column_names
-      colnames = keys.map {|key| "#{@name}::#{key}"}
+      colnames = (["name"] + keys).map {|key| "#{@type_name}::#{key}"}
       if @children.size > 0
         # All children should have the same content keys
         colnames += @children.first.send(:flat_column_names)
@@ -89,7 +92,7 @@ module Mochigome
 
     # TODO: Should handle trickier situations involving datanodes not having various columns
     def append_rows_to(table, stack = [])
-      stack.push values
+      stack.push ([@name] + values)
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, stack)}
       else

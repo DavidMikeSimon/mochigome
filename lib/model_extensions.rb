@@ -92,13 +92,18 @@ module Mochigome
   private
 
   class ReportFocus
-    attr_reader :name
+    attr_reader :type_name
     attr_reader :fields
 
     def initialize(owner, settings)
       @owner = owner
-      @name = settings.options[:name] || owner.class.name
+      @name_proc = settings.options[:name] || lambda{|obj| obj.name}
+      @type_name = settings.options[:type_name] || owner.class.name
       @fields = settings.options[:fields] || []
+    end
+
+    def name
+      @name_proc.call(@owner)
     end
 
     def data(options = {})
@@ -163,25 +168,39 @@ module Mochigome
       @options[:fields] = []
     end
 
-    def name(n)
+    def type_name(n)
       unless n.is_a?(String)
-        raise ModelSetupError.new "Call f.name with a String"
+        raise ModelSetupError.new "Call f.type_name with a String"
       end
-      @options[:name] = n
+      @options[:type_name] = n
+    end
+
+    def name(n)
+      @options[:name] = n.to_proc
     end
 
     def fields(fields)
+      def complain_if_reserved(s)
+        ['name', 'id', 'type', 'internal_type'].each do |reserved|
+          if s.gsub(/ +/, "_").underscore == reserved
+            raise ModelSetupError.new "Field name \"#{s}\" conflicts with reserved term \"#{reserved}\""
+          end
+        end
+        s
+      end
+
       unless fields.respond_to?(:each)
         raise ModelSetupError.new "Call f.fields with an Enumerable"
       end
+
       @options[:fields] += fields.map do |f|
         case f
         when String, Symbol then {
-          :name => f.to_s,
+          :name => complain_if_reserved(f.to_s.strip),
           :value_func => lambda{|obj| obj.send(f.to_sym)}
         }
         when Hash then {
-          :name => f.keys.first.to_s,
+          :name => complain_if_reserved(f.keys.first.to_s.strip),
           :value_func => f.values.first.to_proc
         }
         else raise ModelSetupError.new "Invalid field: #{f.inspect}"

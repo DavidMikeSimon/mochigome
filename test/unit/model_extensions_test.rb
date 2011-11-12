@@ -5,6 +5,12 @@ describe "an ActiveRecord model" do
     @model_class = Class.new(ActiveRecord::Base)
     @model_class.class_eval do
       set_table_name :fake
+      def name
+        "Moby"
+      end
+      def last_name
+        "Dick"
+      end
     end
     Whale = @model_class
   end
@@ -35,56 +41,84 @@ describe "an ActiveRecord model" do
   it "inherits a parent's report focus settings" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.name "Foobar"
+        f.type_name "Foobar"
       end
     end
     @sub_class = Class.new(@model_class)
     i = @sub_class.new
-    assert_equal "Foobar", i.mochigome_focus.name
+    assert_equal "Foobar", i.mochigome_focus.type_name
   end
 
   it "can override a parent's report focus settings" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.name "Foobar"
+        f.type_name "Foobar"
       end
     end
     @sub_class = Class.new(@model_class)
     @sub_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.name "Narfbork"
+        f.type_name "Narfbork"
       end
     end
     i = @sub_class.new
-    assert_equal "Narfbork", i.mochigome_focus.name
+    assert_equal "Narfbork", i.mochigome_focus.type_name
   end
-  
-  it "uses its class name as the default group name" do
+
+  it "uses its class name as the default type name" do
     @model_class.class_eval do
       acts_as_mochigome_focus
     end
     i = @model_class.new
-    assert_equal "Whale", i.mochigome_focus.name.split("::").last
+    assert_equal "Whale", i.mochigome_focus.type_name.split("::").last
   end
 
-  it "can override the default group name" do
+  it "can override the default type name" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
-        f.name "Thingie"
+        f.type_name "Thingie"
       end
     end
     i = @model_class.new
-    assert_equal "Thingie", i.mochigome_focus.name
+    assert_equal "Thingie", i.mochigome_focus.type_name
   end
 
-  it "cannot specify a nonsense group name" do
+  it "cannot specify a nonsense type name" do
     assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
         acts_as_mochigome_focus do |f|
-          f.name 12345
+          f.type_name 12345
         end
       end
     end
+  end
+
+  it "uses the attribute 'name' as the default focus name" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus
+    end
+    i = @model_class.new
+    assert_equal "Moby", i.mochigome_focus.name
+  end
+
+  it "can override the focus name with another method_name" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus do |f|
+        f.name :last_name
+      end
+    end
+    i = @model_class.new
+    assert_equal "Dick", i.mochigome_focus.name
+  end
+
+  it "can override the focus name with a custom implementation" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus do |f|
+        f.name lambda {|obj| "#{obj.name} #{obj.last_name}"}
+      end
+    end
+    i = @model_class.new
+    assert_equal "Moby Dick", i.mochigome_focus.name
   end
 
   it "can specify fields" do
@@ -189,6 +223,32 @@ describe "an ActiveRecord model" do
     end
   end
 
+  [:name, :id, :type, :internal_type].each do |n|
+    it "cannot specify fields named the same as reserved term '#{n}'" do
+      assert_raises Mochigome::ModelSetupError do
+        @model_class.class_eval do
+          acts_as_mochigome_focus do |f|
+            f.fields [n]
+          end
+        end
+      end
+      assert_raises Mochigome::ModelSetupError do
+        @model_class.class_eval do
+          acts_as_mochigome_focus do |f|
+            f.fields [n.to_s.titleize]
+          end
+        end
+      end
+      assert_raises Mochigome::ModelSetupError do
+        @model_class.class_eval do
+          acts_as_mochigome_focus do |f|
+            f.fields [{n => :foo}]
+          end
+        end
+      end
+    end
+  end
+
   it "appears in Mochigome's global model list if it acts_as_mochigome_focus" do
     assert !Mochigome.reportFocusModels.include?(@model_class)
     @model_class.class_eval do
@@ -281,7 +341,7 @@ describe "an ActiveRecord model" do
     it "returns both field data and all aggregate data with the data method" do
       data = @product_a.mochigome_focus.data
       assert_equal 9, data['Sales count']
-      assert_equal "Product A", data['name']
+      assert_equal 30, data['price']
     end
 
     it "can return data aggregated in the context of another class with similar assoc" do

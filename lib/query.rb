@@ -10,7 +10,7 @@ module Mochigome
 
     def run(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
-      return DataNode.new(@name) if objs.size == 0 # Empty DataNode for empty input
+      return DataNode.new(:report, @name) if objs.size == 0 # Empty DataNode for empty input
 
       unless objs.all?{|obj| obj.class == objs.first.class}
         raise QueryError.new("Query target objects must all be the same type")
@@ -26,8 +26,12 @@ module Mochigome
       # Start at the layer for objs, and descend downwards through layers after that
       #TODO: It would be really fantastic if I could just use AR eager loading for this
       downwards_layers = @layer_types.drop_while{|cls| !objs.first.is_a?(cls)}
-      root = DataNode.new(@name)
-      root << objs.map{|obj| DataNode.new(obj.mochigome_focus.name, [{:obj => obj}])}
+      root = DataNode.new(:report, @name)
+      root << objs.map{|obj| DataNode.new(
+        obj.mochigome_focus.type_name,
+        obj.mochigome_focus.name,
+        [{:obj => obj}]
+      )}
       cur_layer = root.children
       downwards_layers.drop(1).each do |cls|
         new_layer = []
@@ -49,14 +53,20 @@ module Mochigome
               # TODO: Don't assume that through means singular!
               obj = through_obj.send(assoc.source_reflection.name)
               subnode = datanode << DataNode.new(
-                obj.mochigome_focus.name, {:obj => obj, :through_obj => through_obj}
+                obj.mochigome_focus.type_name,
+                obj.mochigome_focus.name,
+                {:obj => obj, :through_obj => through_obj}
               )
               new_layer << subnode
             end
           else
             #FIXME: Not DRY
             datanode[:obj].send(assoc.name).each do |obj|
-              subnode = datanode << DataNode.new(obj.mochigome_focus.name, [{:obj => obj}])
+              subnode = datanode << DataNode.new(
+                obj.mochigome_focus.type_name,
+                obj.mochigome_focus.name,
+                [{:obj => obj}]
+              )
               new_layer << subnode
             end
           end
@@ -85,7 +95,11 @@ module Mochigome
               parent = through_obj.send(assoc.source_reflection.name)
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent, :through_obj => through_obj}
-                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.name, attrs)
+                parent_children_map[parent.id] = DataNode.new(
+                  parent.mochigome_focus.type_name,
+                  parent.mochigome_focus.name,
+                  attrs
+                )
               end
               parent_children_map[parent.id] << child.dup
             end
@@ -96,14 +110,18 @@ module Mochigome
             parents.each do |parent|
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent}
-                parent_children_map[parent.id] = DataNode.new(parent.mochigome_focus.name, attrs)
+                parent_children_map[parent.id] = DataNode.new(
+                  parent.mochigome_focus.name,
+                  parent.mochigome_focus.type_name,
+                  attrs
+                )
               end
               parent_children_map[parent.id] << child.dup
             end
           end
         end
 
-        root = DataNode.new(@name)
+        root = DataNode.new(:report, @name)
         root << parent_children_map.values
       end
 
