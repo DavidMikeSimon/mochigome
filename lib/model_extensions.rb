@@ -32,7 +32,7 @@ module Mochigome
       end
 
       AGGREGATION_FUNCS = {
-        'count' => 'count()',
+        'count' => 'count(*)',
         'distinct' => 'count(distinct %s)',
         'average' => 'avg(%s)',
         'avg' => 'avg(%s)',

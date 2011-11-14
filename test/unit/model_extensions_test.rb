@@ -264,7 +264,7 @@ describe "an ActiveRecord model" do
     # Peeking in past API to make sure it set the expressions correctly
     assert_equal [
       {:name => "Whales average x", :expr => "avg(x)"},
-      {:name => "Whales Count", :expr => "count()"},
+      {:name => "Whales Count", :expr => "count(*)"},
       {:name => "Whales sum x", :expr => "sum(x)"}
     ], @model_class.mochigome_aggregations
   end
@@ -292,7 +292,7 @@ describe "an ActiveRecord model" do
       has_mochigome_aggregations [{"Blue Sales" => ["count", "color='blue'"]}]
     end
     assert_equal [
-      {:name => "Blue Sales", :expr => "count()", :conditions => "color='blue'"}
+      {:name => "Blue Sales", :expr => "count(*)", :conditions => "color='blue'"}
     ], @model_class.mochigome_aggregations
   end
 
