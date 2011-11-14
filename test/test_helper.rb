@@ -3,9 +3,10 @@ ENV['RAILS_ENV'] = 'test'
 prev_dir = Dir.getwd
 begin
   Dir.chdir("#{File.dirname(__FILE__)}/..")
-  
+
   begin
     # Used when running test files directly
+    $LOAD_PATH << File.dirname(__FILE__)
     $LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
     require "#{File.dirname(__FILE__)}/app_root/config/environment"
   rescue LoadError
