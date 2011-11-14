@@ -1,5 +1,31 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 
+describe "an input string" do
+  it "will be converted by auto_numerify to an integer if appropriate" do
+    [35, -35, 0].each do |n|
+      result = Mochigome::ReportFocus.auto_numerify(n.to_s)
+      assert_equal n, result
+      assert_kind_of Integer, result
+    end
+  end
+
+  it "will be converted by auto_numerify to a float if appropriate" do
+    [-35.5, 35.5, 0.0].each do |n|
+      result = Mochigome::ReportFocus.auto_numerify(n.to_s)
+      assert_in_delta n, result
+      assert_kind_of Float, result
+    end
+  end
+
+  it "will remain a string if it is not numeric" do
+    ["", "zero", "yeehah", "foo0.0" "9.2bar"].each do |s|
+      result = Mochigome::ReportFocus.auto_numerify(s)
+      assert_equal s, result
+      assert_kind_of String, result
+    end
+  end
+end
+
 describe "an ActiveRecord model" do
   before do
     @model_class = Class.new(ActiveRecord::Base)

@@ -151,10 +151,23 @@ module Mochigome
           else
             row = assoc_object.send(assoc.name).first(:select => sel_expr, :conditions => cond_expr)
           end
-          h[agg[:name]] = row.x
+          h[agg[:name]] = self.class.auto_numerify(row.x)
         end
       end
       h
+    end
+
+    def self.auto_numerify(data)
+      # It's already some more specific type, leave it alone
+      return data unless data.is_a?(String)
+
+      # Try to turn data into an integer or float if appropriate
+      data = data.strip
+      if data =~ /\A[+-]?\d+(\.\d+)?\Z/
+        return ($1 and !$1.blank?) ? data.to_f : data.to_i
+      else
+        return data
+      end
     end
   end
 
