@@ -8,6 +8,9 @@ Rails::Initializer.run do |config|
   if ENV['PSQL_TEST_MODE']
     puts "Using postgresql for a test database"
     config.database_configuration_file = "#{RAILS_ROOT}/config/database-pg.yml"
+  elsif ENV['MYSQL_TEST_MODE']
+    puts "Using mysql for a test database"
+    config.database_configuration_file = "#{RAILS_ROOT}/config/database-my.yml"
   else
     puts "Using sqlite for a test database"
   end

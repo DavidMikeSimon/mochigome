@@ -6,6 +6,7 @@ gem 'ruport'
 gem 'rgl'
 
 gem 'sqlite3'
+gem 'mysql'
 gem 'factory_girl', '2.0.4'
 gem 'rcov'
 gem 'ruby-prof'
