@@ -4,4 +4,3 @@
 - Replace all the TODOs and FIXMEs with whatever they're asking for (additional checks, use of ordered indifferent hashes instead of arrays of hashes, etc.)
 - If there is more than one association from model A to model B and they're both focusable, pick the one with no conditions. If all the associations have conditions, complain and require that the correct association be manually specified (where "correct" might mean none of them should be valid)
   - Alternately, always ignore conditional associations unless they're specifically provided to Mochigome by the model
-- We need a proper notion of a DataNode's name; currently this refers to the focus name, which is the name of the object's class, which is not what would be expected by the user. Should rename that whole thing to "data_type_name" or something like that, and have a proper "name" attribute, which in turn becomes an XML attribute and not just another annoying-to-xpath-out datum element.

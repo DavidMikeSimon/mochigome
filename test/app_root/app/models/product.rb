@@ -1,6 +1,6 @@
 class Product < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
-    f.fields [:name, :price]
+    f.fields [:price]
   end
   has_mochigome_aggregations [
     :average_price,
