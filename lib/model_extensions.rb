@@ -66,6 +66,21 @@ module Mochigome
         })
       end
 
+      def arelified_assoc(name)
+        assoc = reflect_on_association(name)
+        fkey = assoc.association_foreign_key
+        table = Arel::Table.new(table_name)
+        ftable = Arel::Table.new(assoc.klass.table_name)
+        lambda do |r|
+          r.
+          join(ftable).
+          on(assoc.belongs_to? ?
+            table[fkey].eq(ftable[assoc.klass.primary_key]) :
+            table[primary_key].eq(ftable[fkey])
+          )
+        end
+      end
+
       private
 
       # Given an object, tries to coerce it into a proc that takes a relation
@@ -74,7 +89,7 @@ module Mochigome
         return obj if obj.is_a?(Proc)
         args = if obj.is_a?(Symbol) || obj.is_a?(String)
           obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
-        elsif obj.is_a?(Enumerable)
+        elsif obj.is_a?(Array)
           obj.clone # Going to enclose args, so we need it to stay unchanged
         else
           raise ModelSetupError.new "Invalid aggregation proc: #{obj.inspect}"
@@ -89,9 +104,6 @@ module Mochigome
           raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
         end
         return lambda{|r| func.call(*([r] + args))} # Closure! Huzzah.
-      end
-
-      def assoc_to_rel(assoc_name)
       end
     end
 

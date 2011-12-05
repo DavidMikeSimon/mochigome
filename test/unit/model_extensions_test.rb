@@ -304,7 +304,24 @@ describe "an ActiveRecord model" do
     end
   end
 
-  it "can convert an association into an arel relation" do
-    flunk
+  def query_words_match(str, words)
+    cur_word = words.shift
+    str.split(/[ .]/).each do |s_word|
+      if s_word.gsub(/["'`]+/, '').downcase == cur_word.downcase
+        cur_word = words.shift
+      end
+    end
+    return true if words.empty?
+    raise "NO WORD MATCH ON '#{cur_word}'"
+  end
+
+  it "can convert a belongs_to association into a lambda that processes an arel relation" do
+    @model_class.class_eval do
+      belongs_to :store
+    end
+    assoc = @model_class.arelified_assoc(:store)
+    q = assoc.call(Arel::Table.new(:foo).project(Arel.sql('*'))).to_sql
+    assert query_words_match q,
+      %w{select * from foo join stores on fake store_id = stores id}
   end
 end
