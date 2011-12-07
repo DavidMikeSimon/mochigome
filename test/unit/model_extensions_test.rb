@@ -304,24 +304,45 @@ describe "an ActiveRecord model" do
     end
   end
 
-  def query_words_match(str, words)
+  def assoc_query_words_match(assoc, words)
+    q = assoc.call(Arel::Table.new(:foo).project(Arel.sql('*'))).to_sql
     cur_word = words.shift
-    str.split(/[ .]/).each do |s_word|
+    q.split(/[ .]/).each do |s_word|
       if s_word.gsub(/["'`]+/, '').downcase == cur_word.downcase
         cur_word = words.shift
       end
     end
-    return true if words.empty?
-    raise "NO WORD MATCH ON '#{cur_word}'"
+    return true if cur_word.nil?
+    raise "AQWM '#{q}': NO WORD MATCH ON '#{cur_word}'"
   end
 
   it "can convert a belongs_to association into a lambda that processes an arel relation" do
     @model_class.class_eval do
       belongs_to :store
     end
-    assoc = @model_class.arelified_assoc(:store)
-    q = assoc.call(Arel::Table.new(:foo).project(Arel.sql('*'))).to_sql
-    assert query_words_match q,
+    assert assoc_query_words_match @model_class.arelified_assoc(:store),
       %w{select * from foo join stores on fake store_id = stores id}
+  end
+
+  it "can convert a has_many association into an arel relation lambda" do
+    @model_class.class_eval do
+      has_many :stores
+    end
+    assert assoc_query_words_match @model_class.arelified_assoc(:stores),
+      %w{select * from foo join stores on fake id = stores whale_id}
+  end
+
+  it "can convert a has_one association into an arel relation lambda" do
+    @model_class.class_eval do
+      has_one :store
+    end
+    assert assoc_query_words_match @model_class.arelified_assoc(:store),
+      %w{select * from foo join stores on fake id = stores whale_id}
+  end
+
+  it "raises AssociationError on attempting to arelify a non-extant assoc" do
+    assert_raises Mochigome::AssociationError do
+      Store.arelified_assoc(:dinosaurs)
+    end
   end
 end

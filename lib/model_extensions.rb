@@ -68,15 +68,15 @@ module Mochigome
 
       def arelified_assoc(name)
         assoc = reflect_on_association(name)
-        fkey = assoc.association_foreign_key
+        raise AssociationError.new("No such assoc #{name}") unless assoc
         table = Arel::Table.new(table_name)
         ftable = Arel::Table.new(assoc.klass.table_name)
         lambda do |r|
           r.
           join(ftable).
           on(assoc.belongs_to? ?
-            table[fkey].eq(ftable[assoc.klass.primary_key]) :
-            table[primary_key].eq(ftable[fkey])
+            table[assoc.association_foreign_key].eq(ftable[assoc.klass.primary_key]) :
+            table[primary_key].eq(ftable[assoc.primary_key_name])
           )
         end
       end
