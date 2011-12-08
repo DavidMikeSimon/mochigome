@@ -249,14 +249,6 @@ describe "an ActiveRecord model" do
     end
   end
 
-  it "appears in Mochigome's global model list if it acts_as_mochigome_focus" do
-    assert !Mochigome.reportFocusModels.include?(@model_class)
-    @model_class.class_eval do
-      acts_as_mochigome_focus
-    end
-    assert Mochigome.reportFocusModels.include?(@model_class)
-  end
-
   it "can specify aggregated data to be collected" do
     @model_class.class_eval do
       has_mochigome_aggregations [

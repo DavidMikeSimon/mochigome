@@ -1,4 +1,5 @@
 require 'rgl/adjacency'
+require 'rgl/traversal'
 
 module Mochigome
   class Query
@@ -12,6 +13,7 @@ module Mochigome
       objs = [objs] unless objs.is_a?(Enumerable)
       return DataNode.new(:report, @name) if objs.size == 0 # Empty DataNode for empty input
 
+      # TODO: Theoretically we could limit on multiple types at once, right?
       unless objs.all?{|obj| obj.class == objs.first.class}
         raise QueryError.new("Query target objects must all be the same type")
       end
@@ -52,9 +54,7 @@ module Mochigome
             datanode[:obj].send(assoc.through_reflection.name).each do |through_obj|
               # TODO: Don't assume that through means singular!
               obj = through_obj.send(assoc.source_reflection.name)
-              subnode = datanode << DataNode.new(
-                obj.mochigome_focus.type_name,
-                obj.mochigome_focus.name,
+              subnode = datanode << build_node(
                 {:obj => obj, :through_obj => through_obj}
               )
               new_layer << subnode
@@ -62,11 +62,7 @@ module Mochigome
           else
             #FIXME: Not DRY
             datanode[:obj].send(assoc.name).each do |obj|
-              subnode = datanode << DataNode.new(
-                obj.mochigome_focus.type_name,
-                obj.mochigome_focus.name,
-                [{:obj => obj}]
-              )
+              subnode = datanode << build_node({:obj => obj})
               new_layer << subnode
             end
           end
@@ -95,11 +91,7 @@ module Mochigome
               parent = through_obj.send(assoc.source_reflection.name)
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent, :through_obj => through_obj}
-                parent_children_map[parent.id] = DataNode.new(
-                  parent.mochigome_focus.type_name,
-                  parent.mochigome_focus.name,
-                  attrs
-                )
+                parent_children_map[parent.id] = build_node(attrs)
               end
               parent_children_map[parent.id] << child.dup
             end
@@ -110,11 +102,7 @@ module Mochigome
             parents.each do |parent|
               unless parent_children_map.has_key?(parent.id)
                 attrs = {:obj => parent}
-                parent_children_map[parent.id] = DataNode.new(
-                  parent.mochigome_focus.name,
-                  parent.mochigome_focus.type_name,
-                  attrs
-                )
+                parent_children_map[parent.id] = build_node(attrs)
               end
               parent_children_map[parent.id] << child.dup
             end
@@ -141,6 +129,11 @@ module Mochigome
 
     private
 
+    def build_node(attrs)
+      focus = attrs[:obj].mochigome_focus
+      DataNode.new(focus.name, focus.type_name, attrs)
+    end
+
     def focus_data_node_objs(node, obj_stack=[], commenting=true)
       pushed = 0
       if node.has_key?(:obj)
@@ -166,34 +159,70 @@ module Mochigome
       pushed.times{ obj_stack.pop }
     end
 
-    @@assoc_graph = nil
-    @@edge_assocs = {}
+    @@assoc_graph = RGL::DirectedAdjacencyGraph.new
+    @@graphed_models = Set.new
+    @@edge_relation_funcs = {}
+    @@shortest_paths = {}
 
-    def self.assoc_graph
-      return @@assoc_graph if @assoc_graph
+    def self.relation_over_path(path)
+      rel = Arel::Table.new(path.first.table_name)
+      (0..(path.size-2)).each do |i|
+        u = path[i]
+        v = path[i+1]
+        f = @@edge_relation_funcs[[u,v]]
+        raise QueryError.new("No association from #{u.name} to #{v.name}") unless f
+        rel = f.call(rel)
+      end
+      rel
+    end
 
-      # Build a directed graph of the associations between focusable models
-      @@assoc_graph = RGL::DirectedAdjacencyGraph.new
-      @@assoc_graph.add_vertices(*Mochigome::reportFocusModels)
-      Mochigome::reportFocusModels.each do |cls|
-        # Add any associations that lead to other reportFocusModels
-        cls.reflections.each do |name, assoc|
-          if Mochigome::reportFocusModels.include?(assoc.klass)
-            @@assoc_graph.add_edge(cls, assoc.klass)
-            @@edge_assocs[[cls, assoc.klass]] = assoc
+    def self.path_thru(models)
+      update_assoc_graph(models.reject{|m| @@assoc_graph.has_vertex?(m)})
+      path = [models.first]
+      (0..(models.size-2)).each do |i|
+        u = models[i]
+        v = models[i+1]
+        seg = @@shortest_paths[[u,v]]
+        raise QueryError.new("Can't travel from #{u.name} to #{v.name}") unless seg
+        seg.drop(1).each{|step| path << step}
+      end
+      path
+    end
+
+    def self.update_assoc_graph(models)
+      model_queue = models.dup
+      added_models = []
+      until model_queue.empty?
+        model = model_queue.shift
+        next if @@graphed_models.include? model
+        @@graphed_models.add model
+        added_models << model
+
+        model.reflections.each do |name, assoc|
+          next if assoc.through_reflection
+          next if assoc.options[:polymorphic] # How to deal with these? Check for matching has_X assoc?
+          foreign_model = assoc.klass
+          edge = [model, foreign_model]
+          next if @@assoc_graph.has_edge?(*edge) # Ignore duplicate assocs
+          @@assoc_graph.add_edge(*edge)
+          @@edge_relation_funcs[edge] = model.arelified_assoc(name)
+          unless @@graphed_models.include?(foreign_model)
+            model_queue.push(foreign_model)
           end
         end
       end
-      return @@assoc_graph
-    end
 
-    def self.edge_assoc(u, v)
-      assoc_graph # Make sure @@edge_assocs has been populated
-      assoc = @@edge_assocs[[u,v]]
-      unless assoc
-        raise QueryError.new("No association between #{u} and #{v}")
+      added_models.each do |model|
+        path_tree = @@assoc_graph.bfs_search_tree_from(model).reverse
+        path_tree.depth_first_search do |tgt_model|
+          next if tgt_model == model
+          path = [tgt_model]
+          while (parent = path_tree.adjacent_vertices(path.first).first)
+            path.unshift parent
+          end
+          @@shortest_paths[[model,tgt_model]] = path
+        end
       end
-      return assoc
     end
   end
 end

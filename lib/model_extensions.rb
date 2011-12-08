@@ -1,9 +1,4 @@
 module Mochigome
-  @reportFocusModels = []
-  def self.reportFocusModels
-    @reportFocusModels
-  end
-
   module ModelExtensions
     def self.included(base)
       base.extend(ClassMethods)
@@ -24,7 +19,6 @@ module Mochigome
         yield settings if block_given?
         write_inheritable_attribute :mochigome_focus_settings, settings
         send(:include, InstanceMethods)
-        Mochigome::reportFocusModels << self
       end
 
       def acts_as_mochigome_focus?
@@ -32,7 +26,7 @@ module Mochigome
       end
 
       AGGREGATION_FUNCS = {
-        :count => lambda{|r| r[:id].count},
+        :count => lambda{|r| r.count},
         :distinct => lambda{|r,c| r[c].count(true)},
         :average => lambda{|r,c| r[c].average},
         :avg => :average,
@@ -67,6 +61,7 @@ module Mochigome
       end
 
       def arelified_assoc(name)
+        # TODO: Deal with polymorphic assocs.
         assoc = reflect_on_association(name)
         raise AssociationError.new("No such assoc #{name}") unless assoc
         table = Arel::Table.new(table_name)
