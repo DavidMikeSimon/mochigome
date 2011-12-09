@@ -77,6 +77,13 @@ describe Mochigome::DataNode do
       ]
       assert_equal @datanode.children.drop(1), new_children
     end
+
+    it "understands forward-slash to mean indexing in children" do
+      @datanode << Mochigome::DataNode.new(:subdata, :alice)
+      @datanode << Mochigome::DataNode.new(:subdata, :bob)
+      assert_equal @datanode.children[0], @datanode/0
+      assert_equal @datanode.children[1], @datanode/1
+    end
   end
 
   describe "when populated" do

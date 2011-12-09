@@ -37,6 +37,10 @@ module Mochigome
       end
     end
 
+    def /(idx)
+      @children[idx]
+    end
+
     # TODO: Only define xml-related methods if nokogiri loaded
     def to_xml
       doc = Nokogiri::XML::Document.new
