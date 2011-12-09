@@ -127,7 +127,9 @@ module Mochigome
     end
 
     def data(options = {})
-      field_data.merge(aggregate_data(:all, options))
+      #field_data.merge(aggregate_data(:all, options))
+      # FIXME
+      field_data
     end
 
     def field_data

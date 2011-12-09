@@ -38,4 +38,12 @@ unless ActiveRecord::ConnectionAdapters::ConnectionPool.methods.include?("table_
       @@columns_hash_proxy ||= Mochigome::ColumnsHashProxy.new(self)
     end
   end
+
+  class ActiveRecord::ConnectionAdapters::SQLiteAdapter
+    def select_rows(sql, name = nil)
+      execute(sql, name).map do |row|
+        row.keys.select{|key| key.is_a? Integer}.map{|key| row[key]}
+      end
+    end
+  end
 end

@@ -162,7 +162,7 @@ describe Mochigome::Query do
     assert_match c, /^Mochigome Version: #{Mochigome::VERSION}\n/
     assert_match c, /\nTime: \w{3} \w{3} \d+ .+\n/
     assert_match c, /\nLayers: Owner => Store => Product\n/
-    assert_match c, /\nAR Association Path:\n\* <- Owner.+\n\* == Store.+\n\* -> Product.+\n/
+    assert_match c, /\nAR Path: Owner => Store => StoreProduct => Product\n/
   end
 
   it "puts a descriptive comment on the first node of each layer" do

@@ -6,6 +6,8 @@ module Mochigome
     def initialize(layer_types, name = "report")
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
+      @assoc_path = self.class.path_thru(layer_types)
+      @ids_rel = self.class.ids_relation_over_path(@assoc_path)
       @name = name
     end
 
@@ -22,103 +24,54 @@ module Mochigome
         raise QueryError.new("Query target object type must be in the query layer list")
       end
 
-      # Used to provide debugging information in the root DataNode comment
-      assoc_path = ["== #{objs.first.class.name} =="]
-
-      # Start at the layer for objs, and descend downwards through layers after that
-      #TODO: It would be really fantastic if I could just use AR eager loading for this
-      downwards_layers = @layer_types.drop_while{|cls| !objs.first.is_a?(cls)}
+      rel = @ids_rel.where(
+        Arel::Table.new(objs.first.class.table_name)[
+          objs.first.class.primary_key
+        ].in(objs.map(&:id))
+      )
+      ids_table = @layer_types.first.connection.select_rows(rel.to_sql)
+      ids_table = ids_table.map{|row| row.map{|cell| cell.to_i}}
       root = DataNode.new(:report, @name)
-      root << objs.map{|obj| DataNode.new(
-        obj.mochigome_focus.type_name,
-        obj.mochigome_focus.name,
-        [{:obj => obj}]
-      )}
-      cur_layer = root.children
-      downwards_layers.drop(1).each do |cls|
-        new_layer = []
-        assoc = Query.edge_assoc(cur_layer.first[:obj].class, cls)
+      parent_col_num = nil
+      parent_stratum = nil
+      cur_stratum = {}
+      @layer_types.each do |model|
+        col_num = @assoc_path.find_index(model)
+        cur_ids = Set.new
+        cur_to_parent = {}
 
-        assoc_str = "-> #{cls.name} via #{cur_layer.first[:obj].class.name}##{assoc.name}"
-        if assoc.through_reflection
-          assoc_str << " (thru #{assoc.through_reflection.name})"
-        end
-        assoc_path.push assoc_str
-
-        cur_layer.each do |datanode|
-          # FIXME: Don't assume that downwards means plural association
-          # TODO: Are there other ways context could matter besides :through assocs?
-          # i.e. If C belongs_to A and also belongs_to B, and layer_types = [A,B,C]
-          # TODO: What if a through reflection goes through _another_ through reflection?
-          if assoc.through_reflection
-            datanode[:obj].send(assoc.through_reflection.name).each do |through_obj|
-              # TODO: Don't assume that through means singular!
-              obj = through_obj.send(assoc.source_reflection.name)
-              subnode = datanode << build_node(
-                {:obj => obj, :through_obj => through_obj}
-              )
-              new_layer << subnode
-            end
-          else
-            #FIXME: Not DRY
-            datanode[:obj].send(assoc.name).each do |obj|
-              subnode = datanode << build_node({:obj => obj})
-              new_layer << subnode
-            end
-          end
-        end
-        cur_layer = new_layer
-      end
-
-      # Take our tree so far and include it in parent trees, going up to the first layer
-      upwards_layers = @layer_types.take_while{|cls| !objs.first.is_a?(cls)}.reverse
-      upwards_layers.each do |cls|
-        assoc = Query.edge_assoc(root.children.first[:obj].class, cls)
-
-        assoc_str =  "<- #{cls.name} via #{root.children.first[:obj].class.name}##{assoc.name}"
-        if assoc.through_reflection
-          assoc_str << " (thru #{assoc.through_reflection.name})"
-        end
-        assoc_path.unshift assoc_str
-
-        parent_children_map = ActiveSupport::OrderedHash.new
-        root.children.each do |child|
-          if assoc.through_reflection
-            through_objs = child[:obj].send(assoc.through_reflection.name)
-            through_objs = [through_objs] unless through_objs.is_a?(Enumerable)
-            through_objs.each do |through_obj|
-              # TODO: Don't assume that through means singular!
-              parent = through_obj.send(assoc.source_reflection.name)
-              unless parent_children_map.has_key?(parent.id)
-                attrs = {:obj => parent, :through_obj => through_obj}
-                parent_children_map[parent.id] = build_node(attrs)
-              end
-              parent_children_map[parent.id] << child.dup
-            end
-          else
-            #FIXME: Not DRY
-            parents = child[:obj].send(assoc.name)
-            parents = [parents] unless parents.is_a?(Enumerable)
-            parents.each do |parent|
-              unless parent_children_map.has_key?(parent.id)
-                attrs = {:obj => parent}
-                parent_children_map[parent.id] = build_node(attrs)
-              end
-              parent_children_map[parent.id] << child.dup
-            end
+        ids_table.each do |row|
+          cur_id = row[col_num]
+          cur_ids.add cur_id
+          if parent_stratum
+            cur_to_parent[cur_id] ||= []
+            cur_to_parent[cur_id] << row[parent_col_num]
           end
         end
 
-        root = DataNode.new(:report, @name)
-        root << parent_children_map.values
+        model.all(:conditions => {model.primary_key => cur_ids.to_a}).each do |obj|
+          f = obj.mochigome_focus
+          dn = DataNode.new(f.type_name, f.name, [{:obj => obj}])
+          if parent_stratum
+            cur_to_parent.fetch(obj.id).each do |parent_id|
+              parent_stratum.fetch(parent_id) << dn
+            end
+          else
+            root << dn
+          end
+          cur_stratum[obj.id] = dn
+        end
+
+        parent_col_num = col_num
+        parent_stratum = cur_stratum
+        cur_stratum = {}
       end
 
       root.comment = <<-eos
         Mochigome Version: #{Mochigome::VERSION}
         Time: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
-        AR Association Path:
-        #{assoc_path.map{|s| "* #{s}"}.join("\n")}
+        AR Path: #{@assoc_path.map(&:name).join(" => ")}
       eos
       root.comment.gsub!(/\n +/, "\n")
       root.comment.lstrip!
@@ -128,11 +81,6 @@ module Mochigome
     end
 
     private
-
-    def build_node(attrs)
-      focus = attrs[:obj].mochigome_focus
-      DataNode.new(focus.name, focus.type_name, attrs)
-    end
 
     def focus_data_node_objs(node, obj_stack=[], commenting=true)
       pushed = 0
