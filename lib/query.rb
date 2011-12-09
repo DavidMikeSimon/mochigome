@@ -164,7 +164,7 @@ module Mochigome
     @@edge_relation_funcs = {}
     @@shortest_paths = {}
 
-    def self.relation_over_path(path)
+    def self.ids_relation_over_path(path)
       rel = Arel::Table.new(path.first.table_name)
       (0..(path.size-2)).each do |i|
         u = path[i]
@@ -173,7 +173,7 @@ module Mochigome
         raise QueryError.new("No association from #{u.name} to #{v.name}") unless f
         rel = f.call(rel)
       end
-      rel
+      rel.project(path.map{|m| Arel::Table.new(m.table_name)[m.primary_key]})
     end
 
     def self.path_thru(models)
@@ -185,6 +185,9 @@ module Mochigome
         seg = @@shortest_paths[[u,v]]
         raise QueryError.new("Can't travel from #{u.name} to #{v.name}") unless seg
         seg.drop(1).each{|step| path << step}
+      end
+      unless path.uniq == path
+        raise QueryError.new("Path thru #{models.map(&:name).join('-')} doubles back: #{path.map(&:name).join('-')}")
       end
       path
     end

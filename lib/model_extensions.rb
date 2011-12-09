@@ -68,7 +68,7 @@ module Mochigome
         ftable = Arel::Table.new(assoc.klass.table_name)
         lambda do |r|
           r.
-          join(ftable).
+          join(ftable, Arel::Nodes::OuterJoin).
           on(assoc.belongs_to? ?
             table[assoc.association_foreign_key].eq(ftable[assoc.klass.primary_key]) :
             table[primary_key].eq(ftable[assoc.primary_key_name])
@@ -98,7 +98,7 @@ module Mochigome
         unless args.size == func.arity-1
           raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
         end
-        return lambda{|r| func.call(*([r] + args))} # Closure! Huzzah.
+        return lambda{|r| func.call(*([r] + args))}
       end
     end
 
