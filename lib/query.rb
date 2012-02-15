@@ -13,7 +13,9 @@ module Mochigome
 
     def run(objs)
       objs = [objs] unless objs.is_a?(Enumerable)
-      return DataNode.new(:report, @name) if objs.size == 0 # Empty DataNode for empty input
+
+      # Empty DataNode for empty input
+      return DataNode.new(:report, @name) if objs.size == 0
 
       # TODO: Theoretically we could limit on multiple types at once, right?
       unless objs.all?{|obj| obj.class == objs.first.class}
@@ -21,7 +23,7 @@ module Mochigome
       end
 
       unless @layer_types.any?{|layer| objs.first.is_a?(layer)}
-        raise QueryError.new("Query target object type must be in the query layer list")
+        raise QueryError.new("Query target's class must be in layer list")
       end
 
       rel = @ids_rel.where(
@@ -49,7 +51,9 @@ module Mochigome
           end
         end
 
-        model.all(:conditions => {model.primary_key => cur_ids.to_a}).each do |obj|
+        model.all(
+          :conditions => {model.primary_key => cur_ids.to_a}
+        ).each do |obj|
           f = obj.mochigome_focus
           dn = DataNode.new(f.type_name, f.name, [{:obj => obj}])
           if parent_stratum
@@ -118,7 +122,7 @@ module Mochigome
         u = path[i]
         v = path[i+1]
         f = @@edge_relation_funcs[[u,v]]
-        raise QueryError.new("No association from #{u.name} to #{v.name}") unless f
+        raise QueryError.new("No assoc from #{u.name} to #{v.name}") unless f
         rel = f.call(rel)
       end
       rel.project(path.map{|m| Arel::Table.new(m.table_name)[m.primary_key]})
@@ -135,7 +139,10 @@ module Mochigome
         seg.drop(1).each{|step| path << step}
       end
       unless path.uniq == path
-        raise QueryError.new("Path thru #{models.map(&:name).join('-')} doubles back: #{path.map(&:name).join('-')}")
+        raise QueryError.new(
+          "Path thru #{models.map(&:name).join('-')} doubles back: " +
+          path.map(&:name).join('-')
+        )
       end
       path
     end
@@ -151,7 +158,7 @@ module Mochigome
 
         model.reflections.each do |name, assoc|
           next if assoc.through_reflection
-          next if assoc.options[:polymorphic] # How to deal with these? Check for matching has_X assoc?
+          next if assoc.options[:polymorphic] # TODO How to deal with these? Check for matching has_X assoc?
           foreign_model = assoc.klass
           edge = [model, foreign_model]
           next if @@assoc_graph.has_edge?(*edge) # Ignore duplicate assocs
