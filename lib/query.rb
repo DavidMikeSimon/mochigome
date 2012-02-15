@@ -46,8 +46,8 @@ module Mochigome
           cur_id = row[col_num]
           cur_ids.add cur_id
           if parent_stratum
-            cur_to_parent[cur_id] ||= []
-            cur_to_parent[cur_id] << row[parent_col_num]
+            cur_to_parent[cur_id] ||= Set.new
+            cur_to_parent[cur_id].add row[parent_col_num]
           end
         end
 
