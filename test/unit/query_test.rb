@@ -110,10 +110,9 @@ describe Mochigome::Query do
     assert_no_children data_node/0/0
   end
 
-  it "cannot build a DataNode tree when given disconnected layers" do
-    q = Mochigome::Query.new([Category, BoringDatum])
+  it "cannot build a Query through disconnected layers" do
     assert_raises Mochigome::QueryError do
-      data_node = q.run(@category1)
+      q = Mochigome::Query.new([Category, BoringDatum])
     end
   end
 

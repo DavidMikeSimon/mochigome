@@ -171,6 +171,7 @@ module Mochigome
       end
 
       added_models.each do |model|
+        next unless @@assoc_graph.has_vertex?(model)
         path_tree = @@assoc_graph.bfs_search_tree_from(model).reverse
         path_tree.depth_first_search do |tgt_model|
           next if tgt_model == model
