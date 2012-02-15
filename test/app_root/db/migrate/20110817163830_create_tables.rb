@@ -4,7 +4,6 @@ class CreateTables < ActiveRecord::Migration
       t.string :name
       t.decimal :price
       t.integer :category_id
-      t.boolean :categorized
       t.timestamps
     end
 

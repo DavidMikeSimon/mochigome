@@ -4,7 +4,6 @@ FactoryGirl.define do
   factory :product do
     name 'LG Optimus V'
     price 19.95
-    categorized true
   end
 
   factory :category do
@@ -23,7 +22,7 @@ FactoryGirl.define do
     phone_number "800-555-1212"
     email_address { "#{first_name}.#{last_name}@example.com".downcase }
   end
-  
+
   factory :store_product do
     store
     product

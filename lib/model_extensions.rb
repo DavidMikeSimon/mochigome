@@ -67,12 +67,16 @@ module Mochigome
         table = Arel::Table.new(table_name)
         ftable = Arel::Table.new(assoc.klass.table_name)
         lambda do |r|
-          r.
-          join(ftable, Arel::Nodes::OuterJoin).
-          on(assoc.belongs_to? ?
-            table[assoc.association_foreign_key].eq(ftable[assoc.klass.primary_key]) :
-            table[primary_key].eq(ftable[assoc.primary_key_name])
-          )
+          f = r.join(ftable, Arel::Nodes::OuterJoin)
+          if assoc.belongs_to?
+            f = f.on(table[assoc.association_foreign_key].eq(
+              ftable[assoc.klass.primary_key]
+            ))
+          else
+            f = f.on(table[primary_key].eq(ftable[assoc.primary_key_name]))
+          end
+          # TODO: Apply association conditions.
+          f
         end
       end
 

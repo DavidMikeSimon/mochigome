@@ -6,9 +6,6 @@ describe Mochigome::Query do
     @product_a = create(:product, :name => "Product A", :category => @category1)
     @product_b = create(:product, :name => "Product B", :category => @category1)
 
-    # Belongs to a category, but fails Category's has_many(:products) conditions
-    @product_x = create(:product, :name => "Product X", :category => @category1, :categorized => false)
-
     @category2 = create(:category, :name => "Category 2")
     @product_c = create(:product, :name => "Product C", :category => @category2)
     @product_d = create(:product, :name => "Product D", :category => @category2)
