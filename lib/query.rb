@@ -55,7 +55,9 @@ module Mochigome
           :conditions => {model.primary_key => cur_ids.to_a}
         ).each do |obj|
           f = obj.mochigome_focus
-          dn = DataNode.new(f.type_name, f.name, [{:obj => obj}])
+          dn = DataNode.new(f.type_name, f.name)
+          dn.merge!(f.field_data)
+          dn[:internal_type] = obj.class.name
           if parent_stratum
             cur_to_parent.fetch(obj.id).each do |parent_id|
               parent_stratum.fetch(parent_id) << dn
@@ -80,33 +82,10 @@ module Mochigome
       root.comment.gsub!(/\n +/, "\n")
       root.comment.lstrip!
 
-      focus_data_node_objs(root)
       return root
     end
 
     private
-
-    def focus_data_node_objs(node, obj_stack=[], commenting=true)
-      pushed = 0
-      if node.has_key?(:obj)
-        obj = node.delete(:obj)
-        obj_stack.push(obj); pushed += 1
-        if commenting
-          node.comment = <<-eos
-            Context:
-            #{obj_stack.map{|o| "#{o.class.name}:#{o.id}"}.join("\n")}
-          eos
-          node.comment.gsub!(/\n +/, "\n")
-          node.comment.lstrip!
-        end
-        node.merge!(obj.mochigome_focus.data(:context => obj_stack))
-        node[:internal_type] = obj.class.name
-      end
-      node.children.each_index do |i|
-        focus_data_node_objs(node.children[i], obj_stack, i == 0 && commenting)
-      end
-      pushed.times{ obj_stack.pop }
-    end
 
     @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@graphed_models = Set.new

@@ -165,27 +165,6 @@ describe Mochigome::Query do
     assert_match c, /\nAR Path: Owner => Store => StoreProduct => Product\n/
   end
 
-  it "puts a descriptive comment on the first node of each layer" do
-    q = Mochigome::Query.new([Owner, Store, Product])
-    data_node = q.run([@store_x, @store_y, @store_z])
-
-    owner_comment = (data_node/0).comment
-    assert owner_comment
-    assert_nil (data_node/1).comment # No comment on second owner
-
-    store_comment = (data_node/0/0).comment
-    assert store_comment
-    assert_nil (data_node/1/0).comment # No comment on second store
-
-    product_comment = (data_node/0/0/0).comment
-    assert product_comment
-    assert_nil (data_node/0/0/1).comment # No comment on 2nd product
-
-    [owner_comment, store_comment, product_comment].each do |comment|
-      assert_match comment, /^Context:\nOwner:#{@john.id}.*\n/ # Owner is always in context
-    end
-  end
-
   it "will not allow a query on targets of different types" do
     q = Mochigome::Query.new([Owner, Store, Product])
     assert_raises Mochigome::QueryError do

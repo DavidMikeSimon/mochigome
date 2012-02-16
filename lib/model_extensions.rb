@@ -130,12 +130,6 @@ module Mochigome
       @name_proc.call(@owner)
     end
 
-    def data(options = {})
-      #field_data.merge(aggregate_data(:all, options))
-      # FIXME
-      field_data
-    end
-
     def field_data
       h = ActiveSupport::OrderedHash.new
       self.fields.each do |field|
