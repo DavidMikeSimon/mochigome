@@ -56,12 +56,12 @@ module Mochigome
 
       model = types.first
       col_num = @assoc_path.find_index(model)
-      cur_ids = Set.new
+      layer_ids = Set.new
       cur_to_parent = {}
 
       ids_table.each do |row|
         cur_id = row[col_num]
-        cur_ids.add cur_id
+        layer_ids.add cur_id
         if parent_col_num
           cur_to_parent[cur_id] ||= Set.new
           cur_to_parent[cur_id].add row[parent_col_num]
@@ -70,7 +70,7 @@ module Mochigome
 
       layer = {}
       model.find_each(
-        :conditions => {model.primary_key => cur_ids.to_a}
+        :conditions => {model.primary_key => layer_ids.to_a}
       ) do |obj|
         f = obj.mochigome_focus
         dn = DataNode.new(f.type_name, f.name)
