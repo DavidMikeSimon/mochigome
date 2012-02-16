@@ -33,45 +33,9 @@ module Mochigome
       )
       ids_table = @layer_types.first.connection.select_rows(rel.to_sql)
       ids_table = ids_table.map{|row| row.map{|cell| cell.to_i}}
+
       root = DataNode.new(:report, @name)
-      parent_col_num = nil
-      parent_stratum = nil
-      cur_stratum = {}
-      @layer_types.each do |model|
-        col_num = @assoc_path.find_index(model)
-        cur_ids = Set.new
-        cur_to_parent = {}
-
-        ids_table.each do |row|
-          cur_id = row[col_num]
-          cur_ids.add cur_id
-          if parent_stratum
-            cur_to_parent[cur_id] ||= Set.new
-            cur_to_parent[cur_id].add row[parent_col_num]
-          end
-        end
-
-        model.all(
-          :conditions => {model.primary_key => cur_ids.to_a}
-        ).each do |obj|
-          f = obj.mochigome_focus
-          dn = DataNode.new(f.type_name, f.name)
-          dn.merge!(f.field_data)
-          dn[:internal_type] = obj.class.name
-          if parent_stratum
-            cur_to_parent.fetch(obj.id).each do |parent_id|
-              parent_stratum.fetch(parent_id) << dn
-            end
-          else
-            root << dn
-          end
-          cur_stratum[obj.id] = dn
-        end
-
-        parent_col_num = col_num
-        parent_stratum = cur_stratum
-        cur_stratum = {}
-      end
+      fill_layers(ids_table, {:root => root}, @layer_types)
 
       root.comment = <<-eos
         Mochigome Version: #{Mochigome::VERSION}
@@ -86,6 +50,47 @@ module Mochigome
     end
 
     private
+
+    def fill_layers(ids_table, parents, types, parent_col_num = nil)
+      return if types.size == 0
+
+      model = types.first
+      col_num = @assoc_path.find_index(model)
+      cur_ids = Set.new
+      cur_to_parent = {}
+
+      ids_table.each do |row|
+        cur_id = row[col_num]
+        cur_ids.add cur_id
+        if parent_col_num
+          cur_to_parent[cur_id] ||= Set.new
+          cur_to_parent[cur_id].add row[parent_col_num]
+        end
+      end
+
+      layer = {}
+      model.find_each(
+        :conditions => {model.primary_key => cur_ids.to_a}
+      ) do |obj|
+        f = obj.mochigome_focus
+        dn = DataNode.new(f.type_name, f.name)
+        dn.merge!(f.field_data)
+        dn[:internal_type] = obj.class.name
+
+        if parent_col_num
+          cur_to_parent.fetch(obj.id).each do |parent_id|
+            parents.fetch(parent_id) << dn
+          end
+        else
+          parents[:root] << dn
+        end
+        layer[obj.id] = dn
+      end
+
+      fill_layers(ids_table, layer, types.drop(1), col_num)
+    end
+
+    # TODO: Move the stuff below into its own module
 
     @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@graphed_models = Set.new
