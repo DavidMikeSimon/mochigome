@@ -276,7 +276,7 @@ describe "an ActiveRecord model" do
 
   it "can specify aggregations with custom arel expressions" do
     @model_class.class_eval do
-      has_mochigome_aggregations [{"The Answer" => lambda{|r| }}]
+      has_mochigome_aggregations [{"The Answer" => lambda{|r| 42}}]
     end
     assert_equal [
       "The Answer"

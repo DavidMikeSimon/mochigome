@@ -45,7 +45,6 @@ describe Mochigome::Query do
   def assert_equal_children(a, node)
     b = node.children
     assert_equal a.size, b.size
-    # Not checking aggregate data because we don't know about a's context here
     a.zip(b).each do |obj, fields|
       obj.mochigome_focus.field_data.each do |k,v|
         assert_equal v, fields[k]
@@ -129,8 +128,9 @@ describe Mochigome::Query do
     end
   end
 
-  it "collects aggregate data in the context of all layers when traversing down" do
-    q = Mochigome::Query.new([Owner, Store, Product])
+  it "collects aggregate data in the context of all layers" do
+    q = Mochigome::Query.new([Owner, Store, Product], [[Product, Sale]])
+
     data_node = q.run([@john, @jane])
     # Store X, Product C
     assert_equal "Product C", (data_node/0/0/1).name
@@ -138,10 +138,7 @@ describe Mochigome::Query do
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/1/0).name
     assert_equal 2, (data_node/1/1/0)['Sales count']
-  end
 
-  it "collects aggregate data in the context of all layers when traversing up" do
-    q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run(@product_c)
     # Store X, Product C
     assert_equal "Product C", (data_node/0/0/0).name
@@ -151,16 +148,16 @@ describe Mochigome::Query do
     assert_equal 2, (data_node/1/0/0)['Sales count']
   end
 
-  it "collects aggregate data in the context of distant layers" do
-    # TODO: Implement me! I think this is necessary to justify focus_data_node_objs passing obj_stack
-  end
+  # TODO: Test against double-counting data rows in aggregations
+  # TODO: Test case where data model is already in layer path
+  # TODO: Test case where the condition is deeper than the focus model
 
   it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@store_x, @store_y, @store_z])
     c = data_node.comment
     assert_match c, /^Mochigome Version: #{Mochigome::VERSION}\n/
-    assert_match c, /\nTime: \w{3} \w{3} \d+ .+\n/
+    assert_match c, /\nReport Generated: \w{3} \w{3} \d+ .+\n/
     assert_match c, /\nLayers: Owner => Store => Product\n/
     assert_match c, /\nAR Path: Owner => Store => StoreProduct => Product\n/
   end

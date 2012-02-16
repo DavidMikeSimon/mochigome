@@ -6,6 +6,7 @@ module Mochigome
       base.write_inheritable_attribute :mochigome_focus_settings, nil
       base.class_inheritable_reader :mochigome_focus_settings
 
+      # TODO: Use an ordered hash for this
       base.write_inheritable_attribute :mochigome_aggregations, []
       base.class_inheritable_reader :mochigome_aggregations
     end
@@ -25,8 +26,10 @@ module Mochigome
         !!mochigome_focus_settings
       end
 
+      # TODO: Split out aggregation stuff into its own module
+
       AGGREGATION_FUNCS = {
-        :count => lambda{|r| r.count},
+        :count => lambda{|r| r[:id].count}, # FIXME Look up real prikey
         :distinct => lambda{|r,c| r[c].count(true)},
         :average => lambda{|r,c| r[c].average},
         :avg => :average,
@@ -67,6 +70,9 @@ module Mochigome
         table = Arel::Table.new(table_name)
         ftable = Arel::Table.new(assoc.klass.table_name)
         lambda do |r|
+          # FIXME: This acts as though arel methods are non-destructive,
+          # but they are, right? Except, I can't remove the rel
+          # assignment from relation_over_path...
           f = r.join(ftable, Arel::Nodes::OuterJoin)
           if assoc.belongs_to?
             f = f.on(table[assoc.association_foreign_key].eq(
