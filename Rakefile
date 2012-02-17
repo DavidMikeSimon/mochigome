@@ -59,12 +59,13 @@ gemspec = Gem::Specification.new do |s|
   s.email        = "david.mike.simon@gmail.com"
   s.homepage     = "http://github.com/DavidMikeSimon/mochigome"
   s.summary      = "User-customizable report generator"
-  s.description  = "Mochigome builds sophisticated report datasets from your ActiveRecord models"
+  s.description  = "Report generator that uses your ActiveRecord associations"
   s.files        = `git ls-files .`.split("\n") - [".gitignore"]
   s.platform     = Gem::Platform::RUBY
   s.require_path = 'lib'
   s.rubyforge_project = '[none]'
 
+  s.add_dependency('arel', '2.1.4')
   s.add_dependency('ruport')
   s.add_dependency('nokogiri')
   s.add_dependency('rgl')
