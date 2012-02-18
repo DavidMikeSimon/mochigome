@@ -171,8 +171,8 @@ module Mochigome
 
     # TODO: Move the stuff below into its own module
 
-    @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@graphed_models = Set.new
+    @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@edge_relation_funcs = {}
     @@shortest_paths = {}
 
@@ -218,10 +218,11 @@ module Mochigome
         @@graphed_models.add model
         added_models << model
 
-        model.reflections.each do |name, assoc|
+        model.reflections.
+        reject{|name, assoc| assoc.through_reflection}.
+        each do |name, assoc|
           # TODO: What about self associations?
           # TODO: What about associations to the same model on different keys?
-          next if assoc.through_reflection
           next if assoc.options[:polymorphic] # TODO How to deal with these? Check for matching has_X assoc?
           foreign_model = assoc.klass
           edge = [model, foreign_model]
@@ -244,6 +245,21 @@ module Mochigome
             path.unshift parent
           end
           @@shortest_paths[[model,tgt_model]] = path
+        end
+
+        # Use through reflections as a hint for preferred indirect paths
+        model.reflections.
+        select{|name, assoc| assoc.through_reflection}.
+        each do |name, assoc|
+          begin
+            foreign_model = assoc.klass
+            join_model = assoc.through_reflection.klass
+          rescue NameError
+            # FIXME Can't handle polymorphic through reflection
+          end
+          edge = [model,foreign_model]
+          next if @@shortest_paths[edge].try(:size).try(:<, 3)
+          @@shortest_paths[edge] = [model, join_model, foreign_model]
         end
       end
     end
