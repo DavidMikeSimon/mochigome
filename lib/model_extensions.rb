@@ -133,7 +133,7 @@ module Mochigome
     def initialize(owner, settings)
       @owner = owner
       @name_proc = settings.options[:name] || lambda{|obj| obj.name}
-      @type_name = settings.options[:type_name] || owner.class.name
+      @type_name = settings.options[:type_name] || owner.class.human_name
       @fields = settings.options[:fields] || []
     end
 
