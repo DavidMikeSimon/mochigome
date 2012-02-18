@@ -3,7 +3,7 @@ require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
 describe Mochigome::Query do
   before do
     @category1 = create(:category, :name => "Category 1")
-    @product_a = create(:product, :name => "Product A", :category => @category1)
+    @product_a = create(:product, :name => "Product A", :category => @category1, :price => 5)
     @product_b = create(:product, :name => "Product B", :category => @category1)
 
     @category2 = create(:category, :name => "Category 2")
@@ -148,9 +148,17 @@ describe Mochigome::Query do
     assert_equal 2, (data_node/1/0/0)['Sales count']
   end
 
+  it "can do conditional counts" do
+    q = Mochigome::Query.new([Category], [[Category, Product]])
+    data_node = q.run([@category1, @category2])
+    assert_equal 1, (data_node/0)['Expensive products']
+    assert_equal 2, (data_node/1)['Expensive products']
+  end
+
   # TODO: Test against double-counting data rows in aggregations
   # TODO: Test case where data model is already in layer path
   # TODO: Test case where the condition is deeper than the focus model
+  # TODO: Test some of the other predicate functions
 
   it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])

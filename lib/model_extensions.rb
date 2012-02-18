@@ -37,7 +37,12 @@ module Mochigome
         :min => :minimum,
         :maximum => lambda{|r,c| r[c].maximum},
         :max => :maximum,
-        :sum => lambda{|r,c| r[c].sum}
+        :sum => lambda{|r,c| r[c].sum},
+        :count_predicate => lambda{|r,c,f|
+          Arel::Nodes::SqlLiteral.new(
+            "CASE WHEN #{f.call(r[c]).to_sql} THEN 1 ELSE NULL END"
+          ).count
+        }
       }
 
       def has_mochigome_aggregations(aggregations)
