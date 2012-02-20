@@ -131,9 +131,10 @@ module Mochigome
       end
 
       layer = {}
-      model.find_each(
-        :conditions => {model.primary_key => layer_ids.to_a}
-      ) do |obj|
+      model.all( # TODO: Find a way to do this with data streaming
+        :conditions => {model.primary_key => layer_ids.to_a},
+        :order => model.mochigome_focus_settings.get_ordering
+      ).each do |obj|
         f = obj.mochigome_focus
         dn = DataNode.new(f.type_name, f.name)
         dn.merge!(f.field_data)

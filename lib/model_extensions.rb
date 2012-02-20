@@ -13,7 +13,7 @@ module Mochigome
 
     module ClassMethods
       def acts_as_mochigome_focus
-        if self.try(:mochigome_focus_settings).try(:orig_class) == self
+        if self.try(:mochigome_focus_settings).try(:model) == self
           raise Mochigome::ModelSetupError.new("Already acts_as_mochigome_focus for #{self.name}")
         end
         settings = ReportFocusSettings.new(self)
@@ -152,10 +152,11 @@ module Mochigome
 
   class ReportFocusSettings
     attr_reader :options
-    attr_reader :orig_class
+    attr_reader :model
+    attr_reader :ordering
 
-    def initialize(orig_class)
-      @orig_class = orig_class
+    def initialize(model)
+      @model = model
       @options = {}
       @options[:fields] = []
     end
@@ -169,6 +170,14 @@ module Mochigome
 
     def name(n)
       @options[:name] = n.to_proc
+    end
+
+    def ordering(n)
+      @options[:ordering] = n.to_s
+    end
+
+    def get_ordering
+      @options[:ordering] || @model.primary_key.to_s
     end
 
     def fields(fields)

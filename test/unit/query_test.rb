@@ -70,6 +70,21 @@ describe Mochigome::Query do
     assert_no_children data_node/0
   end
 
+  it "orders by ID by default" do
+    q = Mochigome::Query.new([Product])
+    data_node = q.run([@product_b, @product_a, @product_c])
+    assert_equal_children [@product_a, @product_b, @product_c], data_node
+  end
+
+  it "orders by custom fields when the model focus settings specify so" do
+    q = Mochigome::Query.new([Category])
+    catZ = create(:category, :name => "Zebras") # Created first, has lower ID
+    catA = create(:category, :name => "Apples")
+    data_node = q.run([catZ, catA])
+    assert_equal catA.name, (data_node/0).name
+    assert_equal catZ.name, (data_node/1).name
+  end
+
   it "uses the model focus's type name for the DataNode's type name" do
     q = Mochigome::Query.new([Store])
     data_node = q.run(@store_x)

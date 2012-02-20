@@ -121,6 +121,27 @@ describe "an ActiveRecord model" do
     assert_equal "Moby Dick", i.mochigome_focus.name
   end
 
+  it "uses the primary key as the default ordering" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus do |f|
+        f.name :last_name
+      end
+    end
+    assert_equal "id",
+      @model_class.mochigome_focus_settings.get_ordering
+  end
+
+  it "can specify a custom ordering" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus do |f|
+        f.name :last_name
+        f.ordering :first_name
+      end
+    end
+    assert_equal "first_name",
+      @model_class.mochigome_focus_settings.get_ordering
+  end
+
   it "can specify fields" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
