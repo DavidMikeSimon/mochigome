@@ -14,6 +14,8 @@ module Mochigome
           Arel::Table.new(m.table_name)[m.primary_key]
         })
 
+      # TODO: Validate that aggregate_data_sources in correct format
+      # TODO: Validate that all agg focus models are in the layer types list
       aggs_by_model = {}
       aggregate_data_sources.each do |focus_cls, data_cls|
         aggs_by_model[focus_cls] ||= []
