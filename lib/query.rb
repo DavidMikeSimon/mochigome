@@ -23,17 +23,18 @@ module Mochigome
 
       @aggregate_rels = {}
       aggs_by_model.each do |focus_model, data_models|
+        # Need to do a relation over the entire path in case query runs
+        # on something other than the focus model layer.
+        # TODO: Would be better to only do this if necesssitated by the
+        # conditions supplied to the query when it is ran.
+        focus_rel = self.class.relation_over_path(@layers_path)
+
         # TODO: Properly handle focus model that is not in layer types list
         key_path = @layers_path.take_while{|m| m != focus_model} + [focus_model]
         key_cols = key_path.map{|m|
           Arel::Table.new(m.table_name)[m.primary_key]
         }
 
-        # Need to do a relation over the entire path in case query runs
-        # on something other than the focus model layer.
-        # TODO: Would be better to only do this if necessesitated by the
-        # conditions supplied to the query when it is ran.
-        focus_rel = self.class.relation_over_path(@layers_path).group(key_cols)
         @aggregate_rels[focus_model] = {}
         data_models.each do |data_model|
           f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
@@ -48,11 +49,18 @@ module Mochigome
 
           agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           data_tbl = Arel::Table.new(data_model.table_name)
-          agg_rel.project(key_cols + data_model.mochigome_aggregations.map{|a|
+          agg_rel.project data_model.mochigome_aggregations.map{|a|
             a[:proc].call(data_tbl)
-          })
-          @aggregate_rels[focus_model][data_model] = agg_rel
+          }
+
+          @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
+            r = agg_rel.dup
+            cols = key_cols.take(n)
+            r.project(cols).group(cols) unless cols.empty?
+            r
+          }
         end
+
       end
     end
 
@@ -87,19 +95,28 @@ module Mochigome
       @aggregate_rels.each do |focus_model, data_model_rels|
         super_types = @layer_types.take_while{|m| m != focus_model}
         super_cols = super_types.map{|m| @layers_path.find_index(m)}
-        focus_col = @layers_path.find_index(focus_model)
-        data_model_rels.each do |data_model, rel|
-          agg_fields = data_model.mochigome_aggregations.size
-          q = objs_condition_f.call(rel)
-          data_tree = {}
-          @layer_types.first.connection.select_rows(q.to_sql).each do |row|
-            c = data_tree
-            super_cols.each do |i|
-              c = (c[row[i].to_i] ||= {})
+        data_model_rels.each do |data_model, rels|
+          aggs_count = data_model.mochigome_aggregations.size
+          rels.each do |rel|
+            q = objs_condition_f.call(rel)
+            data_tree = {}
+            # Each row has aggs_count data fields, followed by the id fields
+            # from least specific to most.
+            @layer_types.first.connection.select_rows(q.to_sql).each do |row|
+              if row.size == aggs_count
+                data_tree = row.take(aggs_count)
+              else
+                c = data_tree
+                super_cols.each_with_index do |sc_num, sc_idx|
+                  break if aggs_count+sc_idx >= row.size-1
+                  col_num = aggs_count + super_cols[sc_num]
+                  c = (c[row[col_num].to_i] ||= {})
+                end
+                c[row.last.to_i] = row.take(aggs_count)
+              end
             end
-            c[row[focus_col].to_i] = row.drop(row.size - agg_fields)
+            insert_aggregate_data_fields(root, data_tree, data_model)
           end
-          insert_aggregate_data_fields(root, data_tree, data_model)
         end
       end
 

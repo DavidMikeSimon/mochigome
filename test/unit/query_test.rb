@@ -143,7 +143,7 @@ describe Mochigome::Query do
     end
   end
 
-  it "collects aggregate data in the context of all layers" do
+  it "collects aggregate data by grouping on all layers" do
     q = Mochigome::Query.new([Owner, Store, Product], [[Product, Sale]])
 
     data_node = q.run([@john, @jane])
@@ -161,6 +161,20 @@ describe Mochigome::Query do
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/0/0).name
     assert_equal 2, (data_node/1/0/0)['Sales count']
+  end
+
+  it "collects aggregate data on layers above the focus" do
+    q = Mochigome::Query.new([Owner, Store, Product], [[Product, Sale]])
+
+    data_node = q.run([@john, @jane])
+
+    assert_equal "Jane's Store (North)", (data_node/1/0).name
+    assert_equal 11, (data_node/1/0)['Sales count']
+
+    assert_equal "Jane Doe", (data_node/1).name
+    assert_equal 16, (data_node/1)['Sales count']
+
+    assert_equal 24, data_node['Sales count']
   end
 
   it "can do conditional counts" do
