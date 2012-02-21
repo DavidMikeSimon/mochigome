@@ -91,7 +91,6 @@ module Mochigome
         data_model_rels.each do |data_model, rel|
           agg_fields = data_model.mochigome_aggregations.size
           q = objs_condition_f.call(rel)
-          puts q.to_sql
           data_tree = {}
           @layer_types.first.connection.select_rows(q.to_sql).each do |row|
             c = data_tree
