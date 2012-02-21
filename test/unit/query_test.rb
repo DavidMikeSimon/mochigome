@@ -149,18 +149,18 @@ describe Mochigome::Query do
     data_node = q.run([@john, @jane])
     # Store X, Product C
     assert_equal "Product C", (data_node/0/0/1).name
-    assert_equal 3, (data_node/0/0/1)['Sale::count']
+    assert_equal 3, (data_node/0/0/1)['Sales count']
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/1/0).name
-    assert_equal 2, (data_node/1/1/0)['Sale::count']
+    assert_equal 2, (data_node/1/1/0)['Sales count']
 
     data_node = q.run(@product_c)
     # Store X, Product C
     assert_equal "Product C", (data_node/0/0/0).name
-    assert_equal 3, (data_node/0/0/0)['Sale::count']
+    assert_equal 3, (data_node/0/0/0)['Sales count']
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/0/0).name
-    assert_equal 2, (data_node/1/0/0)['Sale::count']
+    assert_equal 2, (data_node/1/0/0)['Sales count']
   end
 
   it "collects aggregate data on layers above the focus" do
@@ -169,12 +169,12 @@ describe Mochigome::Query do
     data_node = q.run([@john, @jane])
 
     assert_equal "Jane's Store (North)", (data_node/1/0).name
-    assert_equal 11, (data_node/1/0)['Sale::count']
+    assert_equal 11, (data_node/1/0)['Sales count']
 
     assert_equal "Jane Doe", (data_node/1).name
-    assert_equal 16, (data_node/1)['Sale::count']
+    assert_equal 16, (data_node/1)['Sales count']
 
-    assert_equal 24, data_node['Sale::count']
+    assert_equal 24, data_node['Sales count']
   end
 
   it "can do conditional counts" do

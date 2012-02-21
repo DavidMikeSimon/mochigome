@@ -54,7 +54,7 @@ module Mochigome
           case f
           when String, Symbol then
             {
-              :name => "%s::%s" % [name, f.to_s],
+              :name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")],
               :proc => aggregation_proc(f)
             }
           when Hash then

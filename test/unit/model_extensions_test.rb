@@ -281,8 +281,8 @@ describe "an ActiveRecord model" do
       ]
     end
     assert_equal [
-      "Whale::average_x",
-      "Whale::Count",
+      "Whales average x",
+      "Whales Count",
       "bloo"
     ], @model_class.mochigome_aggregations.map{|a| a[:name]}
   end
