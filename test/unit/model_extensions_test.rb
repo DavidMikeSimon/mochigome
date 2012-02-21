@@ -270,6 +270,8 @@ describe "an ActiveRecord model" do
     end
   end
 
+  # Actual use of aggregations is tested in query_test.
+
   it "can specify aggregated data to be collected" do
     @model_class.class_eval do
       has_mochigome_aggregations [
@@ -278,7 +280,6 @@ describe "an ActiveRecord model" do
         {"bloo" => :sum_x}
       ]
     end
-    # The actual effectiveness of these lambdas will be tested in query_test.
     assert_equal [
       "Whales average x",
       "Whales Count",

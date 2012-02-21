@@ -14,8 +14,7 @@ module Mochigome
           Arel::Table.new(m.table_name)[m.primary_key]
         })
 
-      # TODO: Validate that aggregate_data_sources in correct format
-      # TODO: Validate that all agg focus models are in the layer types list
+      # TODO: Validate that aggregate_data_sources is in the correct format
       aggs_by_model = {}
       aggregate_data_sources.each do |focus_cls, data_cls|
         aggs_by_model[focus_cls] ||= []
@@ -24,27 +23,30 @@ module Mochigome
 
       @aggregate_rels = {}
       aggs_by_model.each do |focus_model, data_models|
-        agg_path = @layers_path.take_while{|m| m != focus_model} + [focus_model]
-        key_cols = agg_path.map{|m|
+        # TODO: Properly handle focus model that is not in layer types list
+        key_path = @layers_path.take_while{|m| m != focus_model} + [focus_model]
+        key_cols = key_path.map{|m|
           Arel::Table.new(m.table_name)[m.primary_key]
         }
 
         # Need to do a relation over the entire path in case query runs
-        # on something deeper than the focus model layer.
-        # TODO: Maybe only do this if necessary? Could it cause duplicates?
+        # on something other than the focus model layer.
+        # TODO: Would be better to only do this if necessesitated by the
+        # conditions supplied to the query when it is ran.
         focus_rel = self.class.relation_over_path(@layers_path).group(key_cols)
         @aggregate_rels[focus_model] = {}
         data_models.each do |data_model|
-          agg_rel = focus_rel.dup
-
-          # Join on the shortest path to the data model
-          p = nil
-          agg_path.each do |m|
-            cand = self.class.path_thru([m, data_model])
-            p = cand if p.nil? || cand.size < p.size
+          f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
+          agg_path = nil
+          f2d_path.reverse.each do |link_model|
+            # TODO: Properly handle focus model that is not in layer types list
+            if @layers_path.include?(link_model)
+              agg_path = f2d_path.drop_while{|m| m != link_model}
+              break
+            end
           end
-          agg_rel = self.class.relation_over_path(p, agg_rel) if p.size > 1
 
+          agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           data_tbl = Arel::Table.new(data_model.table_name)
           agg_rel.project(key_cols + data_model.mochigome_aggregations.map{|a|
             a[:proc].call(data_tbl)
@@ -89,6 +91,7 @@ module Mochigome
         data_model_rels.each do |data_model, rel|
           agg_fields = data_model.mochigome_aggregations.size
           q = objs_condition_f.call(rel)
+          puts q.to_sql
           data_tree = {}
           @layer_types.first.connection.select_rows(q.to_sql).each do |row|
             c = data_tree
