@@ -70,6 +70,7 @@ module Mochigome
 
       def arelified_assoc(name)
         # TODO: Deal with polymorphic assocs.
+        model = self
         assoc = reflect_on_association(name)
         raise AssociationError.new("No such assoc #{name}") unless assoc
         table = Arel::Table.new(table_name)
@@ -78,16 +79,23 @@ module Mochigome
           # FIXME: This acts as though arel methods are non-destructive,
           # but they are, right? Except, I can't remove the rel
           # assignment from relation_over_path...
-          f = r.join(ftable, Arel::Nodes::OuterJoin)
+          cond = nil
           if assoc.belongs_to?
-            f = f.on(table[assoc.association_foreign_key].eq(
+            cond = table[assoc.association_foreign_key].eq(
               ftable[assoc.klass.primary_key]
-            ))
+            )
           else
-            f = f.on(table[primary_key].eq(ftable[assoc.primary_key_name]))
+            cond = table[primary_key].eq(ftable[assoc.primary_key_name])
           end
+
+          if assoc.options[:as]
+            # FIXME Can we assume that this is the polymorphic type field?
+            cond = cond.and(ftable["#{assoc.options[:as]}_type"].eq(model.name))
+          end
+
           # TODO: Apply association conditions.
-          f
+
+          r.join(ftable, Arel::Nodes::OuterJoin).on(cond)
         end
       end
 

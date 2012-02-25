@@ -359,4 +359,6 @@ describe "an ActiveRecord model" do
       Store.arelified_assoc(:dinosaurs)
     end
   end
+
+  # TODO: Test proper conditions used on polymorphic assocs
 end

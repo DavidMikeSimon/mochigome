@@ -189,7 +189,7 @@ describe Mochigome::Query do
   # TODO: Test case where the condition is deeper than the focus model
   # TODO: Test some of the other predicate functions
   # TODO: Test that we actually go through the focus, to avoid i.e. the JSAS
-  # bug where we were summing School->AR instead of School->Section->Student-AR
+  # bug where we were summing School->AR instead of School->Section->Student->AR
 
   it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])
