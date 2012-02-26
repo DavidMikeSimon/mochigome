@@ -271,7 +271,7 @@ describe Mochigome::Query do
     af = proc do |cls|
       return {} unless cls == Product
       return {
-        :join_models => [Store],
+        :join_paths => [[Product, StoreProduct, Store]],
         :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
       }
     end
@@ -285,11 +285,13 @@ describe Mochigome::Query do
     af = proc do |cls|
       return {} unless cls == Product
       return {
-        :join_models => [Store],
+        :join_paths => [[Product, StoreProduct, Store]],
         :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
       }
     end
     q = Mochigome::Query.new([Product, Store], :access_filter => af)
     assert_equal 1, q.instance_variable_get(:@ids_rel).to_sql.scan(/join .stores./i).size
   end
+
+  # TODO: Test that access filter join paths are followed, rather than closest path
 end

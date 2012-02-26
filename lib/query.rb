@@ -147,17 +147,19 @@ module Mochigome
       joined = Set.new
       models.uniq.each do |model|
         h = @access_filter.call(model)
-        if h[:join_models]
-          h[:join_models].each do |jm|
-            path = self.class.path_thru([model, jm])
-            (0..(path.size-2)).each do |i|
-              next if models.include?(path[i+1]) or joined.include?(path[i+1])
-              r = self.class.relation_func(path[i], path[i+1]).call(r)
-              joined.add path[i+1]
-            end
+        h.delete(:join_paths).try :each do |path|
+          (0..(path.size-2)).each do |i|
+            next if models.include?(path[i+1]) or joined.include?(path[i+1])
+            r = self.class.relation_func(path[i], path[i+1]).call(r)
+            joined.add path[i+1]
           end
         end
-        r = r.where(h[:condition]) if h[:condition]
+        if h[:condition]
+          r = r.where(h.delete(:condition))
+        end
+        unless h.empty?
+          raise QueryError.new("Unknown assoc filter keys #{h.keys.inspect}")
+        end
       end
       r
     end
