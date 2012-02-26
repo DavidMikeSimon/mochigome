@@ -59,7 +59,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  arel (= 2.1.4)
+  arel (~> 2.1)
   autowatchr
   factory_girl (= 2.0.4)
   minitest

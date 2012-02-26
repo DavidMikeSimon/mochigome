@@ -65,7 +65,7 @@ gemspec = Gem::Specification.new do |s|
   s.require_path = 'lib'
   s.rubyforge_project = '[none]'
 
-  s.add_dependency('arel', '2.1.4')
+  s.add_dependency('arel', '~> 2.1')
   s.add_dependency('ruport')
   s.add_dependency('nokogiri')
   s.add_dependency('rgl')
