@@ -3,20 +3,27 @@ require 'rgl/traversal'
 
 module Mochigome
   class Query
-    def initialize(layer_types, aggregate_data_sources = [], name = "report")
+    def initialize(layer_types, options = {})
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
       @layers_path = self.class.path_thru(layer_types)
-      @name = name
+
+      @name = options.delete(:root_name).try(:to_s) || "report"
+      @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
+      aggregate_sources = options.delete(:aggregate_sources) || []
+      unless options.empty?
+        raise QueryError.new("Unknown options: #{options.keys.inspect}")
+      end
 
       @ids_rel = self.class.relation_over_path(@layers_path).
         project(@layers_path.map{|m|
           Arel::Table.new(m.table_name)[m.primary_key]
         })
+      @ids_rel = access_filtered_relation(@ids_rel, @layers_path)
 
-      # TODO: Validate that aggregate_data_sources is in the correct format
+      # TODO: Validate that aggregate_sources is in the correct format
       aggs_by_model = {}
-      aggregate_data_sources.each do |focus_cls, data_cls|
+      aggregate_sources.each do |focus_cls, data_cls|
         aggs_by_model[focus_cls] ||= []
         aggs_by_model[focus_cls] << data_cls
       end
@@ -26,7 +33,8 @@ module Mochigome
         # Need to do a relation over the entire path in case query runs
         # on something other than the focus model layer.
         # TODO: Would be better to only do this if necesssitated by the
-        # conditions supplied to the query when it is ran.
+        # conditions supplied to the query when it is ran, and/or
+        # the access filter.
         focus_rel = self.class.relation_over_path(@layers_path)
 
         # TODO: Properly handle focus model that is not in layer types list
@@ -48,6 +56,7 @@ module Mochigome
           end
 
           agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
+          agg_rel = access_filtered_relation(agg_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
           agg_rel.project data_model.mochigome_aggregations.map{|a|
             a[:proc].call(data_tbl)
@@ -133,6 +142,25 @@ module Mochigome
     end
 
     private
+
+    def access_filtered_relation(r, models)
+      joined = Set.new
+      models.uniq.each do |model|
+        h = @access_filter.call(model)
+        if h[:join_models]
+          h[:join_models].each do |jm|
+            path = self.class.path_thru([model, jm])
+            (0..(path.size-2)).each do |i|
+              next if models.include?(path[i+1]) or joined.include?(path[i+1])
+              r = self.class.relation_func(path[i], path[i+1]).call(r)
+              joined.add path[i+1]
+            end
+          end
+        end
+        r = r.where(h[:condition]) if h[:condition]
+      end
+      r
+    end
 
     def fill_layers(ids_table, parents, types, parent_col_num = nil)
       return if types.size == 0

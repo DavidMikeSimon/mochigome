@@ -40,6 +40,15 @@ describe Mochigome::Query do
     end
   end
 
+  after do
+    Category.delete_all
+    Product.delete_all
+    Owner.delete_all
+    Store.delete_all
+    StoreProduct.delete_all
+    Sale.delete_all
+  end
+
   # Convenience functions to check DataNode output validity
 
   def assert_equal_children(a, node)
@@ -144,7 +153,10 @@ describe Mochigome::Query do
   end
 
   it "collects aggregate data by grouping on all layers" do
-    q = Mochigome::Query.new([Owner, Store, Product], [[Product, Sale]])
+    q = Mochigome::Query.new(
+      [Owner, Store, Product],
+      :aggregate_sources => [[Product, Sale]]
+    )
 
     data_node = q.run([@john, @jane])
     # Store X, Product C
@@ -164,7 +176,10 @@ describe Mochigome::Query do
   end
 
   it "collects aggregate data on layers above the focus" do
-    q = Mochigome::Query.new([Owner, Store, Product], [[Product, Sale]])
+    q = Mochigome::Query.new(
+      [Owner, Store, Product],
+      :aggregate_sources => [[Product, Sale]]
+    )
 
     data_node = q.run([@john, @jane])
 
@@ -178,7 +193,10 @@ describe Mochigome::Query do
   end
 
   it "can do conditional counts" do
-    q = Mochigome::Query.new([Category], [[Category, Product]])
+    q = Mochigome::Query.new(
+      [Category],
+      :aggregate_sources => [[Category, Product]]
+    )
     data_node = q.run([@category1, @category2])
     assert_equal 1, (data_node/0)['Expensive products']
     assert_equal 2, (data_node/1)['Expensive products']
@@ -201,6 +219,27 @@ describe Mochigome::Query do
     assert_match c, /\nAR Path: Owner => Store => StoreProduct => Product\n/
   end
 
+  it "names the root node 'report' by default" do
+    q = Mochigome::Query.new([Owner, Store, Product])
+    data_node = q.run([@store_x, @store_y, @store_z])
+    assert_equal "report", data_node.name
+  end
+
+  it "can set the root node's name to a provided value" do
+    q = Mochigome::Query.new(
+      [Owner, Store, Product],
+      :root_name => "cheese"
+    )
+    data_node = q.run([@store_x, @store_y, @store_z])
+    assert_equal "cheese", data_node.name
+  end
+
+  it "will complain if initialized with an unknown option" do
+    assert_raises Mochigome::QueryError do
+      q = Mochigome::Query.new([Owner, Store, Product], :flim_flam => 123)
+    end
+  end
+
   it "will not allow a query on targets of different types" do
     q = Mochigome::Query.new([Owner, Store, Product])
     assert_raises Mochigome::QueryError do
@@ -213,5 +252,44 @@ describe Mochigome::Query do
     assert_raises Mochigome::QueryError do
       q.run(@category1)
     end
+  end
+
+  it "can use a provided access filter function to limit query results" do
+    af = proc do |cls|
+      return {} unless cls == Product
+      return {
+        :condition => Arel::Table.new(Product.table_name)[:category_id].gt(0)
+      }
+    end
+    q = Mochigome::Query.new([Product], :access_filter => af)
+    dn = q.run(Product.all) # FIXME: Need a better way of doing "all objs" queries
+    assert_equal 4, dn.children.size
+    refute dn.children.any?{|c| c.name == "Product E"}
+  end
+
+  it "can do joins at the request of an access filter" do
+    af = proc do |cls|
+      return {} unless cls == Product
+      return {
+        :join_models => [Store],
+        :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
+      }
+    end
+    q = Mochigome::Query.new([Product], :access_filter => af)
+    dn = q.run(Product.all) # FIXME: Need a better way of doing "all objs" queries
+    assert_equal 2, dn.children.size
+    refute dn.children.any?{|c| c.name == "Product E"}
+  end
+
+  it "access filter joins will not duplicate joins already in the query" do
+    af = proc do |cls|
+      return {} unless cls == Product
+      return {
+        :join_models => [Store],
+        :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
+      }
+    end
+    q = Mochigome::Query.new([Product, Store], :access_filter => af)
+    assert_equal 1, q.instance_variable_get(:@ids_rel).to_sql.scan(/join .stores./i).size
   end
 end
