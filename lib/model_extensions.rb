@@ -29,19 +29,20 @@ module Mochigome
       # TODO: Split out aggregation stuff into its own module
 
       AGGREGATION_FUNCS = {
-        :count => lambda{|r| r[:id].count}, # FIXME Look up real prikey
-        :distinct => lambda{|r,c| r[c].count(true)},
-        :average => lambda{|r,c| r[c].average},
+        :count => lambda{|r| r[:id].count(true)}, # FIXME Look up real prikey
+        :average => lambda{|r,c| r[c].average}, # FIXME Deal with duplicate rows
         :avg => :average,
         :minimum => lambda{|r,c| r[c].minimum},
         :min => :minimum,
         :maximum => lambda{|r,c| r[c].maximum},
         :max => :maximum,
-        :sum => lambda{|r,c| r[c].sum},
+        :sum => lambda{|r,c| r[c].sum}, # FIXME Deal with duplicate rows
         :count_predicate => lambda{|r,c,f|
+          # FIXME: Look up real prikey
+          prikey = Arel::Nodes::NamedFunction.new('',[r[:id]])
           Arel::Nodes::SqlLiteral.new(
-            "CASE WHEN #{f.call(r[c]).to_sql} THEN 1 ELSE NULL END"
-          ).count
+            "CASE WHEN #{f.call(r[c]).to_sql} THEN #{prikey.to_sql} ELSE NULL END"
+          ).count(true)
         }
       }
 

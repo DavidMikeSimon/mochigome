@@ -212,6 +212,41 @@ describe Mochigome::Query do
       data_node['Products sum price']
   end
 
+  it "still does conditional counts correctly when joins below focus used" do
+    af = proc do |cls|
+      return {} unless cls == Product
+      return {
+        :join_paths => [[Product, StoreProduct, Store]]
+      }
+    end
+    q = Mochigome::Query.new(
+      [Category],
+      :aggregate_sources => [[Category, Product]],
+      :access_filter => af
+    )
+    data_node = q.run([@category1, @category2])
+    assert_equal 1, (data_node/0)['Expensive products']
+    assert_equal 2, (data_node/1)['Expensive products']
+  end
+
+  it "still does sums correctly when joins below focus are used" do
+    skip
+    af = proc do |cls|
+      return {} unless cls == Store
+      return {
+        :join_paths => [[Store, StoreProduct, Sale]]
+      }
+    end
+    q = Mochigome::Query.new(
+      [Owner, Store],
+      :aggregate_sources => [[Store, Product]],
+      :access_filter => af
+    )
+    data_node = q.run([@john])
+    assert_equal (@product_a.price + @product_c.price),
+      data_node['Products sum price']
+  end
+
   # TODO: Test against double-counting data rows in aggregations
   # TODO: Test case where data model is already in layer path
   # TODO: Test case where the condition is deeper than the focus model
