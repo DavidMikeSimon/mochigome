@@ -48,12 +48,13 @@ module Mochigome
           f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
           agg_path = nil
           f2d_path.reverse.each do |link_model|
-            # TODO: Properly handle focus model that is not in layer types list
             if @layers_path.include?(link_model)
               agg_path = f2d_path.drop_while{|m| m != link_model}
               break
             end
           end
+          # TODO: Properly handle focus model that is not in layer types list
+          fail unless agg_path
 
           agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_rel = access_filtered_relation(agg_rel, @layers_path + agg_path)

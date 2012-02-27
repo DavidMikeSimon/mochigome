@@ -202,10 +202,19 @@ describe Mochigome::Query do
     assert_equal 2, (data_node/1)['Expensive products']
   end
 
+  it "can do sums" do
+    q = Mochigome::Query.new(
+      [Owner, Store],
+      :aggregate_sources => [[Store, Product]]
+    )
+    data_node = q.run([@john])
+    assert_equal (@product_a.price + @product_c.price),
+      data_node['Products sum price']
+  end
+
   # TODO: Test against double-counting data rows in aggregations
   # TODO: Test case where data model is already in layer path
   # TODO: Test case where the condition is deeper than the focus model
-  # TODO: Test some of the other predicate functions
   # TODO: Test that we actually go through the focus, to avoid i.e. the JSAS
   # bug where we were summing School->AR instead of School->Section->Student->AR
 

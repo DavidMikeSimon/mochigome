@@ -4,6 +4,7 @@ class Product < ActiveRecord::Base
   end
   has_mochigome_aggregations [
     :average_price,
+    :sum_price,
     {"Expensive products" => [:count_predicate, :price,
       lambda{|price| price.gt(10.00)}
     ]}
