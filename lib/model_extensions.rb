@@ -186,6 +186,15 @@ module Mochigome
         end
       })
     end
+
+    def hidden_fields(aggs)
+      orig_keys = Set.new @options[:fields].map{|a| a[:name]}
+      fields(aggs)
+      @options[:fields].each do |h|
+        next if orig_keys.include? h[:name]
+        h[:hidden] = true
+      end
+    end
   end
 
   def self.complain_if_reserved_name(s)

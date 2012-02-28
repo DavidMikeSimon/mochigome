@@ -328,6 +328,17 @@ describe "an ActiveRecord model" do
     end
   end
 
+  it "can specify hidden aggregation fields" do
+    @model_class.class_eval do
+      has_mochigome_aggregations do |a|
+        a.hidden_fields [:count]
+      end
+    end
+    agg = @model_class.mochigome_aggregation_settings.options[:fields].first
+    assert_equal "Whales count", agg[:name]
+    assert agg[:hidden]
+  end
+
   def assoc_query_words_match(assoc, words)
     q = assoc.call(Arel::Table.new(:foo).project(Arel.star)).to_sql
     cur_word = words.shift
