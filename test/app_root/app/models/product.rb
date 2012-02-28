@@ -4,12 +4,12 @@ class Product < ActiveRecord::Base
   end
   has_mochigome_aggregations do |a|
     a.fields [
-      :average_price,
       :sum_price,
       {"Expensive products" => [:count_predicate, :price,
         lambda{|price| price.gt(10.00)}
       ]}
     ]
+    a.hidden_fields [ {"Secret count" => :count} ]
   end
 
   belongs_to :category

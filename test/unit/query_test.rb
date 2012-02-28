@@ -247,11 +247,17 @@ describe Mochigome::Query do
       data_node['Products sum price']
   end
 
-  # TODO: Test against double-counting data rows in aggregations
+  it "does not include hidden fields in output" do
+    q = Mochigome::Query.new(
+      [Owner, Store],
+      :aggregate_sources => [[Store, Product]]
+    )
+    data_node = q.run([@john])
+    refute data_node.has_key?('Secret count')
+  end
+
   # TODO: Test case where data model is already in layer path
   # TODO: Test case where the condition is deeper than the focus model
-  # TODO: Test that we actually go through the focus, to avoid i.e. the JSAS
-  # bug where we were summing School->AR instead of School->Section->Student->AR
 
   it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])

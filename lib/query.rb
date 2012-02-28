@@ -214,7 +214,7 @@ module Mochigome
       if table.is_a? Array
         data_model.mochigome_aggregation_settings.
         options[:fields].zip(table).each do |agg, v|
-          node[agg[:name]] = v
+          node[agg[:name]] = v unless agg[:hidden]
         end
       else
         node.children.each do |c|
