@@ -274,52 +274,62 @@ describe "an ActiveRecord model" do
 
   it "can specify aggregated data to be collected" do
     @model_class.class_eval do
-      has_mochigome_aggregations [
-        :average_x,
-        :Count,
-        {"bloo" => :sum_x}
-      ]
+      has_mochigome_aggregations do |a|
+        a.fields [
+          :average_x,
+          :Count,
+          {"bloo" => :sum_x}
+        ]
+      end
     end
     assert_equal [
       "Whales average x",
       "Whales Count",
       "bloo"
-    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
+    ], @model_class.mochigome_aggregation_settings.options[:fields].map{|a| a[:name]}
   end
 
   it "can specify aggregations with custom names" do
     @model_class.class_eval do
-      has_mochigome_aggregations [{"Mean X" => "avg x"}]
+      has_mochigome_aggregations do |a|
+        a.fields [{"Mean X" => "avg x"}]
+      end
     end
     assert_equal [
       "Mean X"
-    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
+    ], @model_class.mochigome_aggregation_settings.options[:fields].map{|a| a[:name]}
   end
 
   it "can specify aggregations with custom arel expressions" do
     @model_class.class_eval do
-      has_mochigome_aggregations [{"The Answer" => lambda{|r| 42}}]
+      has_mochigome_aggregations do |a|
+        a.fields [{"The Answer" => lambda{|r| 42}}]
+      end
     end
     assert_equal [
       "The Answer"
-    ], @model_class.mochigome_aggregations.map{|a| a[:name]}
+    ], @model_class.mochigome_aggregation_settings.options[:fields].map{|a| a[:name]}
   end
 
-  it "cannot call has_mochigome_aggregations with nonsense" do
+  it "cannot call aggregation fields method with nonsense" do
     assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
-        has_mochigome_aggregations 3
+        has_mochigome_aggregations do |a|
+          a.fields 3
+        end
       end
     end
     assert_raises Mochigome::ModelSetupError do
       @model_class.class_eval do
-        has_mochigome_aggregations [42]
+        has_mochigome_aggregations do |a|
+          a.fields [42]
+        end
       end
     end
   end
 
   def assoc_query_words_match(assoc, words)
-    q = assoc.call(Arel::Table.new(:foo).project(Arel.sql('*'))).to_sql
+    q = assoc.call(Arel::Table.new(:foo).project(Arel.star)).to_sql
     cur_word = words.shift
     q.split(/[ .]/).each do |s_word|
       if s_word.gsub(/["'`]+/, '').downcase == cur_word.downcase

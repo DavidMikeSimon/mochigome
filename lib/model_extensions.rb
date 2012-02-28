@@ -7,8 +7,8 @@ module Mochigome
       base.class_inheritable_reader :mochigome_focus_settings
 
       # TODO: Use an ordered hash for this
-      base.write_inheritable_attribute :mochigome_aggregations, []
-      base.class_inheritable_reader :mochigome_aggregations
+      base.write_inheritable_attribute :mochigome_aggregation_settings, nil
+      base.class_inheritable_reader :mochigome_aggregation_settings
     end
 
     module ClassMethods
@@ -28,45 +28,13 @@ module Mochigome
 
       # TODO: Split out aggregation stuff into its own module
 
-      AGGREGATION_FUNCS = {
-        :count => lambda{|r| r[:id].count(true)}, # FIXME Look up real prikey
-        :average => lambda{|r,c| r[c].average}, # FIXME Deal with duplicate rows
-        :avg => :average,
-        :minimum => lambda{|r,c| r[c].minimum},
-        :min => :minimum,
-        :maximum => lambda{|r,c| r[c].maximum},
-        :max => :maximum,
-        :sum => lambda{|r,c| r[c].sum}, # FIXME Deal with duplicate rows
-        :count_predicate => lambda{|r,c,f|
-          # FIXME: Look up real prikey
-          prikey = Arel::Nodes::NamedFunction.new('',[r[:id]])
-          Arel::Nodes::SqlLiteral.new(
-            "CASE WHEN #{f.call(r[c]).to_sql} THEN #{prikey.to_sql} ELSE NULL END"
-          ).count(true)
-        }
-      }
-
-      def has_mochigome_aggregations(aggregations)
-        unless aggregations.is_a?(Enumerable)
-          raise ModelSetupError.new "Call has_mochigome_aggregations with an Enumerable"
+      def has_mochigome_aggregations
+        if self.try(:mochigome_aggregation_settings).try(:model) == self
+          raise Mochigome::ModelSetupError.new("Already aggregation settings for #{self.name}")
         end
-
-        mochigome_aggregations.concat(aggregations.map {|f|
-          case f
-          when String, Symbol then
-            {
-              :name => "%s %s" % [name.pluralize, f.to_s.sub("_", " ")],
-              :proc => aggregation_proc(f)
-            }
-          when Hash then
-            {
-              :name => f.keys.first.to_s,
-              :proc => aggregation_proc(f.values.first)
-            }
-          else
-            raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
-          end
-        })
+        settings = AggregationSettings.new(self)
+        yield settings if block_given?
+        write_inheritable_attribute :mochigome_aggregation_settings, settings
       end
 
       def arelified_assoc(name)
@@ -100,30 +68,6 @@ module Mochigome
         end
       end
 
-      private
-
-      # Given an object, tries to coerce it into a proc that takes a relation
-      # and returns an expression node to collect some data from that relation.
-      def aggregation_proc(obj)
-        return obj if obj.is_a?(Proc)
-        args = if obj.is_a?(Symbol) || obj.is_a?(String)
-          obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
-        elsif obj.is_a?(Array)
-          obj.clone # Going to enclose args, so we need it to stay unchanged
-        else
-          raise ModelSetupError.new "Invalid aggregation proc: #{obj.inspect}"
-        end
-        func_name = args.shift
-        func = AGGREGATION_FUNCS[func_name]
-        func = AGGREGATION_FUNCS[func] if func.is_a?(Symbol) # Alias lookup
-        unless func
-          raise ModelSetupError.new "Invalid function name: #{func_name}"
-        end
-        unless args.size == func.arity-1
-          raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
-        end
-        return lambda{|r| func.call(*([r] + args))}
-      end
     end
 
     module InstanceMethods
@@ -190,15 +134,6 @@ module Mochigome
     end
 
     def fields(fields)
-      def complain_if_reserved(s)
-        ['name', 'id', 'type', 'internal_type'].each do |reserved|
-          if s.gsub(/ +/, "_").underscore == reserved
-            raise ModelSetupError.new "Field name \"#{s}\" conflicts with reserved term \"#{reserved}\""
-          end
-        end
-        s
-      end
-
       unless fields.respond_to?(:each)
         raise ModelSetupError.new "Call f.fields with an Enumerable"
       end
@@ -206,16 +141,101 @@ module Mochigome
       @options[:fields] += fields.map do |f|
         case f
         when String, Symbol then {
-          :name => complain_if_reserved(f.to_s.strip),
+          :name => Mochigome::complain_if_reserved_name(f.to_s.strip),
           :value_func => lambda{|obj| obj.send(f.to_sym)}
         }
         when Hash then {
-          :name => complain_if_reserved(f.keys.first.to_s.strip),
+          :name => Mochigome::complain_if_reserved_name(f.keys.first.to_s.strip),
           :value_func => f.values.first.to_proc
         }
         else raise ModelSetupError.new "Invalid field: #{f.inspect}"
         end
       end
     end
+  end
+
+  class AggregationSettings
+    attr_reader :options
+    attr_reader :model
+
+    def initialize(model)
+      @model = model
+      @options = {}
+      @options[:fields] = []
+    end
+
+    def fields(aggs)
+      unless aggs.is_a?(Enumerable)
+        raise ModelSetupError.new "Call a.fields with an Enumerable"
+      end
+
+      @options[:fields].concat(aggs.map {|f|
+        case f
+        when String, Symbol then
+          {
+            :name => "%s %s" % [@model.name.pluralize, f.to_s.sub("_", " ")],
+            :proc => Mochigome::aggregation_proc(f)
+          }
+        when Hash then
+          {
+            :name => f.keys.first.to_s,
+            :proc => Mochigome::aggregation_proc(f.values.first)
+          }
+        else
+          raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
+        end
+      })
+    end
+  end
+
+  def self.complain_if_reserved_name(s)
+    test_s = s.gsub(/ +/, "_").underscore
+    ['name', 'id', 'type', 'internal_type'].each do |reserved|
+      if test_s == reserved
+        raise ModelSetupError.new "Field name \"#{s}\" conflicts with reserved term \"#{reserved}\""
+      end
+    end
+    s
+  end
+
+  AGGREGATION_FUNCS = {
+    :count => lambda{|r| r[:id].count(true)}, # FIXME Look up real prikey
+    :average => lambda{|r,c| r[c].average}, # FIXME Deal with duplicate rows
+    :avg => :average,
+    :minimum => lambda{|r,c| r[c].minimum},
+    :min => :minimum,
+    :maximum => lambda{|r,c| r[c].maximum},
+    :max => :maximum,
+    :sum => lambda{|r,c| r[c].sum}, # FIXME Deal with duplicate rows
+    :count_predicate => lambda{|r,c,f|
+      # FIXME: Look up real prikey
+      prikey = Arel::Nodes::NamedFunction.new('',[r[:id]])
+      Arel::Nodes::SqlLiteral.new(
+        "CASE WHEN #{f.call(r[c]).to_sql} THEN #{prikey.to_sql} ELSE NULL END"
+      ).count(true)
+    }
+  }
+
+  # Given an object, tries to coerce it into a proc that takes a relation
+  # and returns an expression node to collect some data from that relation.
+  def self.aggregation_proc(obj)
+    return obj if obj.is_a?(Proc)
+    args = if obj.is_a?(Symbol) || obj.is_a?(String)
+             obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
+           elsif obj.is_a?(Array)
+             obj.clone # Going to enclose args, so we need it to stay unchanged
+           else
+             raise ModelSetupError.new "Invalid aggregation proc: #{obj.inspect}"
+           end
+    func_name = args.shift
+    func = AGGREGATION_FUNCS[func_name]
+    func = AGGREGATION_FUNCS[func] if func.is_a?(Symbol) # Alias lookup
+    unless func
+      raise ModelSetupError.new "Invalid function name: #{func_name}"
+    end
+    unless args.size == func.arity-1
+      raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
+    end
+    return lambda{|r| func.call(*([r] + args))}
   end
 end

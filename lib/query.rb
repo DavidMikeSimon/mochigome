@@ -59,7 +59,8 @@ module Mochigome
           agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_rel = access_filtered_relation(agg_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
-          agg_rel.project data_model.mochigome_aggregations.map{|a|
+          agg_rel.project data_model.mochigome_aggregation_settings.
+          options[:fields].map{|a|
             a[:proc].call(data_tbl)
           }
 
@@ -106,7 +107,7 @@ module Mochigome
         super_types = @layer_types.take_while{|m| m != focus_model}
         super_cols = super_types.map{|m| @layers_path.find_index(m)}
         data_model_rels.each do |data_model, rels|
-          aggs_count = data_model.mochigome_aggregations.size
+          aggs_count = data_model.mochigome_aggregation_settings.options[:fields].size
           rels.each do |rel|
             q = objs_condition_f.call(rel)
             data_tree = {}
@@ -211,7 +212,8 @@ module Mochigome
 
     def insert_aggregate_data_fields(node, table, data_model)
       if table.is_a? Array
-        data_model.mochigome_aggregations.zip(table).each do |agg, v|
+        data_model.mochigome_aggregation_settings.
+        options[:fields].zip(table).each do |agg, v|
           node[agg[:name]] = v
         end
       else

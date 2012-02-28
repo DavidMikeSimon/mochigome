@@ -2,13 +2,15 @@ class Product < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
     f.fields [:price]
   end
-  has_mochigome_aggregations [
-    :average_price,
-    :sum_price,
-    {"Expensive products" => [:count_predicate, :price,
-      lambda{|price| price.gt(10.00)}
-    ]}
-  ]
+  has_mochigome_aggregations do |a|
+    a.fields [
+      :average_price,
+      :sum_price,
+      {"Expensive products" => [:count_predicate, :price,
+        lambda{|price| price.gt(10.00)}
+      ]}
+    ]
+  end
 
   belongs_to :category
   has_many :store_products

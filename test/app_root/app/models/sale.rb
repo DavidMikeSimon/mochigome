@@ -1,5 +1,7 @@
 class Sale < ActiveRecord::Base
-  has_mochigome_aggregations [:count]
+  has_mochigome_aggregations do |a|
+    a.fields [:count]
+  end
 
   belongs_to :store_product
   has_one :store, :through => :store_product
