@@ -60,7 +60,7 @@ module Mochigome
           agg_rel = access_filtered_relation(agg_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
           agg_rel.project data_model.mochigome_aggregation_settings.
-          options[:fields].map{|a|
+          options[:fields].reject{|a| a[:in_ruby]}.map{|a|
             a[:proc].call(data_tbl)
           }
 
@@ -107,7 +107,8 @@ module Mochigome
         super_types = @layer_types.take_while{|m| m != focus_model}
         super_cols = super_types.map{|m| @layers_path.find_index(m)}
         data_model_rels.each do |data_model, rels|
-          aggs_count = data_model.mochigome_aggregation_settings.options[:fields].size
+          aggs = data_model.mochigome_aggregation_settings.options[:fields]
+          aggs_count = aggs.reject{|a| a[:in_ruby]}.size
           rels.each do |rel|
             q = objs_condition_f.call(rel)
             data_tree = {}
@@ -212,9 +213,16 @@ module Mochigome
 
     def insert_aggregate_data_fields(node, table, data_model)
       if table.is_a? Array
-        data_model.mochigome_aggregation_settings.
-        options[:fields].zip(table).each do |agg, v|
+        fields = data_model.mochigome_aggregation_settings.options[:fields]
+        # Pre-fill the node with all fields in the right order
+        fields.each{|agg| node[agg[:name]] = nil unless agg[:hidden] }
+        agg_row = {} # Hold regular aggs here to be used in ruby-based aggs
+        fields.reject{|agg| agg[:in_ruby]}.zip(table).each do |agg, v|
+          agg_row[agg[:name]] = v
           node[agg[:name]] = v unless agg[:hidden]
+        end
+        fields.select{|agg| agg[:in_ruby]}.each do |agg|
+          node[agg[:name]] = agg[:proc].call(agg_row)
         end
       else
         node.children.each do |c|

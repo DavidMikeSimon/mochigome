@@ -247,13 +247,22 @@ describe Mochigome::Query do
       data_node['Products sum price']
   end
 
-  it "does not include hidden fields in output" do
+  it "does not include hidden aggregation fields in output" do
     q = Mochigome::Query.new(
       [Owner, Store],
       :aggregate_sources => [[Store, Product]]
     )
     data_node = q.run([@john])
     refute data_node.has_key?('Secret count')
+  end
+
+  it "correctly runs aggregation fields implemented in ruby" do
+    q = Mochigome::Query.new(
+      [Owner, Store],
+      :aggregate_sources => [[Store, Product]]
+    )
+    data_node = q.run([@john])
+    assert_equal 4, data_node["Count squared"]
   end
 
   # TODO: Test case where data model is already in layer path

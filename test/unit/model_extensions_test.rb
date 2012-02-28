@@ -339,6 +339,20 @@ describe "an ActiveRecord model" do
     assert agg[:hidden]
   end
 
+  it "can specify aggregation fields in ruby which post-process regular fields" do
+    @model_class.class_eval do
+      has_mochigome_aggregations do |a|
+        a.hidden_fields [:count]
+        a.fields_in_ruby [
+          {"Double count" => lambda{|row| row["Whales count"]*2}}
+        ]
+      end
+    end
+    agg = @model_class.mochigome_aggregation_settings.options[:fields].last
+    assert_equal "Double count", agg[:name]
+    assert agg[:in_ruby]
+  end
+
   def assoc_query_words_match(assoc, words)
     q = assoc.call(Arel::Table.new(:foo).project(Arel.star)).to_sql
     cur_word = words.shift

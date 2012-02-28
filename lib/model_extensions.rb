@@ -188,11 +188,21 @@ module Mochigome
     end
 
     def hidden_fields(aggs)
+      fields_with_special_attribute(aggs, :hidden, true)
+    end
+
+    def fields_in_ruby(aggs)
+      fields_with_special_attribute(aggs, :in_ruby, true)
+    end
+
+    private
+
+    def fields_with_special_attribute(aggs, attr_name, value)
       orig_keys = Set.new @options[:fields].map{|a| a[:name]}
       fields(aggs)
       @options[:fields].each do |h|
         next if orig_keys.include? h[:name]
-        h[:hidden] = true
+        h[attr_name] = value
       end
     end
   end

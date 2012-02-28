@@ -10,6 +10,7 @@ class Product < ActiveRecord::Base
       ]}
     ]
     a.hidden_fields [ {"Secret count" => :count} ]
+    a.fields_in_ruby [ {"Count squared" => lambda{|row| row["Secret count"]**2}} ]
   end
 
   belongs_to :category
