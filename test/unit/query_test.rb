@@ -65,16 +65,31 @@ describe Mochigome::Query do
     assert_empty obj.children
   end
 
-  it "returns an empty DataNode if no objects given" do
+  it "returns an empty DataNode if given an empty array" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run([])
     assert_empty data_node
     assert_no_children data_node
   end
 
-  it "can build a one-layer DataNode" do
+  it "returns all possible results if no conditions given" do
+    q = Mochigome::Query.new([Category, Product])
+    data_node = q.run()
+    assert_equal 2, data_node.children.size
+    assert_equal 4, (data_node/0).children.size + (data_node/1).children.size
+  end
+
+  it "can build a one-layer DataNode given an object with an id to focus on" do
     q = Mochigome::Query.new([Product])
     data_node = q.run(@product_a)
+    assert_equal_children [@product_a], data_node
+    assert_no_children data_node/0
+  end
+
+  it "can build a one-layer DataNode when given an arbitrary Arel condition" do
+    q = Mochigome::Query.new([Product])
+    tbl = Arel::Table.new(Product.table_name)
+    data_node = q.run(tbl[:name].eq(@product_a.name))
     assert_equal_children [@product_a], data_node
     assert_no_children data_node/0
   end

@@ -66,13 +66,13 @@ module Mochigome
           end
 
           @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
-            lambda {|cond_f|
+            lambda {|cond|
               d_rel = agg_data_rel.dup
               d_cols = key_cols.take(n) + [Arel::Table.new(data_model.table_name)[data_model.primary_key]]
               d_cols.each_with_index do |col, i|
                 d_rel.project(col.as("g#{i}")).group(col)
               end
-              d_rel = cond_f.call(d_rel)
+              d_rel.where(cond)
 
               a_rel = Arel::SelectManager.new(
                 Arel::Table.engine,
@@ -94,32 +94,29 @@ module Mochigome
       end
     end
 
-    def run(objs)
-      objs = [objs] unless objs.is_a?(Enumerable)
+    def run(cond = nil)
+      root = DataNode.new(:report, @name)
 
-      # Empty DataNode for empty input
-      return DataNode.new(:report, @name) if objs.size == 0
-
-      # TODO: Theoretically we could limit on multiple types at once, right?
-      unless objs.all?{|obj| obj.class == objs.first.class}
-        raise QueryError.new("Query target objects must all be the same type")
+      if cond.is_a?(ActiveRecord::Base)
+        cond = [cond]
+      end
+      if cond.is_a?(Array)
+        return root if cond.empty?
+        unless cond.all?{|obj| obj.class == cond.first.class}
+          raise QueryError.new("Query target objects must all be the same type")
+        end
+        unless @layer_types.any?{|layer| cond.first.is_a?(layer)}
+          raise QueryError.new("Query target's class must be in layer list")
+        end
+        cls = cond.first.class
+        cond = Arel::Table.new(cls.table_name)[cls.primary_key].in(cond.map(&:id))
       end
 
-      unless @layer_types.any?{|layer| objs.first.is_a?(layer)}
-        raise QueryError.new("Query target's class must be in layer list")
-      end
-
-      objs_condition_f = lambda{|r| r.dup.where(
-        Arel::Table.new(objs.first.class.table_name)[
-          objs.first.class.primary_key
-        ].in(objs.map(&:id))
-      )}
-
-      q = objs_condition_f.call(@ids_rel)
+      q = @ids_rel.dup
+      q.where(cond) if cond
       ids_table = @layer_types.first.connection.select_rows(q.to_sql)
       ids_table = ids_table.map{|row| row.map{|cell| cell.to_i}}
 
-      root = DataNode.new(:report, @name)
       fill_layers(ids_table, {:root => root}, @layer_types)
 
       @aggregate_rels.each do |focus_model, data_model_rels|
@@ -129,7 +126,7 @@ module Mochigome
           aggs = data_model.mochigome_aggregation_settings.options[:fields]
           aggs_count = aggs.reject{|a| a[:in_ruby]}.size
           rel_funcs.each do |rel_func|
-            q = rel_func.call(objs_condition_f)
+            q = rel_func.call(cond)
             data_tree = {}
             # Each row has aggs_count data fields, followed by the id fields
             # from least specific to most.
