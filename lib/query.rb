@@ -56,19 +56,38 @@ module Mochigome
           # TODO: Properly handle focus model that is not in layer types list
           fail unless agg_path
 
-          agg_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
-          agg_rel = access_filtered_relation(agg_rel, @layers_path + agg_path)
+          agg_data_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
+          agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
-          agg_rel.project data_model.mochigome_aggregation_settings.
-          options[:fields].reject{|a| a[:in_ruby]}.map{|a|
-            a[:proc].call(data_tbl)
-          }
+          agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
+          agg_data_rel.project
+          agg_fields.each_with_index do |a, i|
+            agg_data_rel.project(a[:value_proc].call(data_tbl).as("d#{i}"))
+          end
 
           @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
-            r = agg_rel.dup
-            cols = key_cols.take(n)
-            r.project(cols).group(cols) unless cols.empty?
-            r
+            lambda {|cond_f|
+              d_rel = agg_data_rel.dup
+              d_cols = key_cols.take(n) + [Arel::Table.new(data_model.table_name)[data_model.primary_key]]
+              d_cols.each_with_index do |col, i|
+                d_rel.project(col.as("g#{i}")).group(col)
+              end
+              d_rel = cond_f.call(d_rel)
+
+              a_rel = Arel::SelectManager.new(
+                Arel::Table.engine,
+                Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
+              )
+              d_tbl = Arel::Table.new("mochigome_data")
+              agg_fields.each_with_index do |a, i|
+                a_rel.project(a[:agg_proc].call(d_tbl["d#{i}"]))
+              end
+              key_cols.take(n).each_with_index do |col, i|
+                outer_name = "og#{i}"
+                a_rel.project(d_tbl["g#{i}"].as(outer_name)).group(outer_name)
+              end
+              a_rel
+            }
           }
         end
 
@@ -106,11 +125,11 @@ module Mochigome
       @aggregate_rels.each do |focus_model, data_model_rels|
         super_types = @layer_types.take_while{|m| m != focus_model}
         super_cols = super_types.map{|m| @layers_path.find_index(m)}
-        data_model_rels.each do |data_model, rels|
+        data_model_rels.each do |data_model, rel_funcs|
           aggs = data_model.mochigome_aggregation_settings.options[:fields]
           aggs_count = aggs.reject{|a| a[:in_ruby]}.size
-          rels.each do |rel|
-            q = objs_condition_f.call(rel)
+          rel_funcs.each do |rel_func|
+            q = rel_func.call(objs_condition_f)
             data_tree = {}
             # Each row has aggs_count data fields, followed by the id fields
             # from least specific to most.
@@ -222,7 +241,7 @@ module Mochigome
           node[agg[:name]] = v unless agg[:hidden]
         end
         fields.select{|agg| agg[:in_ruby]}.each do |agg|
-          node[agg[:name]] = agg[:proc].call(agg_row)
+          node[agg[:name]] = agg[:ruby_proc].call(agg_row)
         end
       else
         node.children.each do |c|

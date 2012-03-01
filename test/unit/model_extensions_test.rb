@@ -300,10 +300,21 @@ describe "an ActiveRecord model" do
     ], @model_class.mochigome_aggregation_settings.options[:fields].map{|a| a[:name]}
   end
 
-  it "can specify aggregations with custom arel expressions" do
+  it "can specify aggregations with custom arel expressions for value" do
     @model_class.class_eval do
       has_mochigome_aggregations do |a|
-        a.fields [{"The Answer" => lambda{|r| 42}}]
+        a.fields [{"The Answer" => [:sum, lambda{|t| t[:some_number_column]*2}]}]
+      end
+    end
+    assert_equal [
+      "The Answer"
+    ], @model_class.mochigome_aggregation_settings.options[:fields].map{|a| a[:name]}
+  end
+
+  it "can specify aggregations with custom arel expressions for aggregation" do
+    @model_class.class_eval do
+      has_mochigome_aggregations do |a|
+        a.fields [{"The Answer" => [lambda{|a| a.sum}, :some_col]}]
       end
     end
     assert_equal [

@@ -5,8 +5,12 @@ class Product < ActiveRecord::Base
   has_mochigome_aggregations do |a|
     a.fields [
       :sum_price,
-      {"Expensive products" => [:count_predicate, :price,
-        lambda{|price| price.gt(10.00)}
+      {"Expensive products" => [
+        :count,
+        Mochigome::null_unless(
+          lambda{|v| v.gt(10.00)},
+          lambda{|t| t[:price]}
+        )
       ]}
     ]
     a.hidden_fields [ {"Secret count" => :count} ]

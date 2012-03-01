@@ -77,6 +77,20 @@ module Mochigome
     end
   end
 
+  # FIXME This probably doesn't belong here. Maybe I should have a module
+  # for this kind of stuff and also put the standard aggregation functions
+  # in there?
+
+  def self.null_unless(pred, value_func)
+    lambda {|t|
+      value = value_func.call(t)
+      val_expr = Arel::Nodes::NamedFunction.new('',[value])
+      Arel::Nodes::SqlLiteral.new(
+        "(CASE WHEN #{pred.call(value).to_sql} THEN #{val_expr.to_sql} ELSE NULL END)"
+      )
+    }
+  end
+
   private
 
   class ReportFocus
@@ -173,14 +187,20 @@ module Mochigome
         case f
         when String, Symbol then
           {
-            :name => "%s %s" % [@model.name.pluralize, f.to_s.sub("_", " ")],
-            :proc => Mochigome::aggregation_proc(f)
-          }
+            :name => "%s %s" % [@model.name.pluralize, f.to_s.sub("_", " ")]
+          }.merge(Mochigome::split_out_aggregation_procs(f))
         when Hash then
-          {
-            :name => f.keys.first.to_s,
-            :proc => Mochigome::aggregation_proc(f.values.first)
-          }
+          if f.size == 1
+            {
+              :name => f.keys.first.to_s
+            }.merge(Mochigome::split_out_aggregation_procs(f.values.first))
+          else
+            {
+              :name => f[:name],
+              :value_proc => Mochigome::value_proc(f[:value]),
+              :agg_proc => Mochigome::aggregation_proc(f[:aggregation])
+            }
+          end
         else
           raise ModelSetupError.new "Invalid aggregation: #{f.inspect}"
         end
@@ -188,22 +208,23 @@ module Mochigome
     end
 
     def hidden_fields(aggs)
-      fields_with_special_attribute(aggs, :hidden, true)
-    end
-
-    def fields_in_ruby(aggs)
-      fields_with_special_attribute(aggs, :in_ruby, true)
-    end
-
-    private
-
-    def fields_with_special_attribute(aggs, attr_name, value)
       orig_keys = Set.new @options[:fields].map{|a| a[:name]}
       fields(aggs)
       @options[:fields].each do |h|
         next if orig_keys.include? h[:name]
-        h[attr_name] = value
+        h[:hidden] = true
       end
+    end
+
+    def fields_in_ruby(aggs)
+      @options[:fields].concat(aggs.map {|f|
+        raise ModelSetupError.new "Invalid ruby agg #{f.inspect}" unless f.is_a?(Hash)
+        {
+          :name => f.keys.first.to_s,
+          :ruby_proc => f.values.first,
+          :in_ruby => true
+        }
+      })
     end
   end
 
@@ -218,43 +239,66 @@ module Mochigome
   end
 
   AGGREGATION_FUNCS = {
-    :count => lambda{|r| r[:id].count(true)}, # FIXME Look up real prikey
-    :average => lambda{|r,c| r[c].average}, # FIXME Deal with duplicate rows
+    :count => lambda{|a| a.count},
+    :distinct => lambda{|a| a.count(true)},
+    :average => lambda{|a| a.average},
     :avg => :average,
-    :minimum => lambda{|r,c| r[c].minimum},
+    :minimum => lambda{|a| a.minimum},
     :min => :minimum,
-    :maximum => lambda{|r,c| r[c].maximum},
+    :maximum => lambda{|a| a.maximum},
     :max => :maximum,
-    :sum => lambda{|r,c| r[c].sum}, # FIXME Deal with duplicate rows
-    :count_predicate => lambda{|r,c,f|
-      # FIXME: Look up real prikey
-      prikey = Arel::Nodes::NamedFunction.new('',[r[:id]])
-      Arel::Nodes::SqlLiteral.new(
-        "CASE WHEN #{f.call(r[c]).to_sql} THEN #{prikey.to_sql} ELSE NULL END"
-      ).count(true)
-    }
+    :sum => lambda{|a| a.sum}
   }
 
-  # Given an object, tries to coerce it into a proc that takes a relation
-  # and returns an expression node to collect some data from that relation.
+  # Given an object, tries to coerce it into a proc that takes a node
+  # and returns an expression node to collect some aggregate data from it.
   def self.aggregation_proc(obj)
-    return obj if obj.is_a?(Proc)
-    args = if obj.is_a?(Symbol) || obj.is_a?(String)
-             obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
-           elsif obj.is_a?(Array)
-             obj.clone # Going to enclose args, so we need it to stay unchanged
-           else
-             raise ModelSetupError.new "Invalid aggregation proc: #{obj.inspect}"
-           end
-    func_name = args.shift
-    func = AGGREGATION_FUNCS[func_name]
-    func = AGGREGATION_FUNCS[func] if func.is_a?(Symbol) # Alias lookup
-    unless func
-      raise ModelSetupError.new "Invalid function name: #{func_name}"
+    if obj.is_a?(Symbol)
+      orig_name = obj
+      2.times do
+        # Lookup twice to allow for indirect aliases in AGGREGATION_FUNCS
+        obj = AGGREGATION_FUNCS[obj] if obj.is_a?(Symbol)
+      end
+      raise ModelSetupError.new "Can't find aggregation function #{orig_name}" unless obj
+      obj
+    elsif obj.is_a?(Proc)
+      obj
+    else
+      raise ModelSetupError.new "Invalid aggregation function #{obj.inspect}"
     end
-    unless args.size == func.arity-1
-      raise ModelSetupError.new "Wrong number of arguments for #{func_name}"
+  end
+
+  # Given an object, tries to coerce it into a proc that takes a relation
+  # and returns a node for some value in it to be aggregated over
+  def self.value_proc(obj)
+    if obj.is_a?(Symbol)
+      lambda {|t| t[obj]}
+    elsif obj.is_a?(Proc)
+      obj
+    else
+      raise ModelSetupError.new "Invalid value function #{obj.inspect}"
     end
-    return lambda{|r| func.call(*([r] + args))}
+  end
+
+  def self.split_out_aggregation_procs(obj)
+    case obj
+    when Symbol, String
+      vals = obj.to_s.split(/[ _]/).map(&:downcase).map(&:to_sym)
+    when Array
+      vals = obj.dup
+    else
+      raise ModelSetupError.new "Invalid aggregation type: #{obj.inspect}"
+    end
+
+    if vals.size == 1
+      vals << :id # TODO : Use real primary key
+    elsif vals.size != 2
+      raise ModelSetupError.new "Wrong # of components for agg: #{obj.inspect}"
+    end
+
+    {
+      :agg_proc => aggregation_proc(vals.first),
+      :value_proc => value_proc(vals.last)
+    }
   end
 end

@@ -230,7 +230,6 @@ describe Mochigome::Query do
   end
 
   it "still does sums correctly when joins below focus are used" do
-    skip
     af = proc do |cls|
       return {} unless cls == Store
       return {
@@ -267,6 +266,7 @@ describe Mochigome::Query do
 
   # TODO: Test case where data model is already in layer path
   # TODO: Test case where the condition is deeper than the focus model
+  # TODO: Test use of non-trivial function for aggregation value
 
   it "puts a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])
