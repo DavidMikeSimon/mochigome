@@ -72,7 +72,7 @@ module Mochigome
               d_cols.each_with_index do |col, i|
                 d_rel.project(col.as("g#{i}")).group(col)
               end
-              d_rel.where(cond)
+              d_rel.where(cond) if cond
 
               a_rel = Arel::SelectManager.new(
                 Arel::Table.engine,
