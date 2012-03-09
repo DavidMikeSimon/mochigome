@@ -37,24 +37,32 @@ module Mochigome
         # the access filter.
         focus_rel = self.class.relation_over_path(@layers_path)
 
-        # TODO: Properly handle focus model that is not in layer types list
-        key_path = @layers_path.take_while{|m| m != focus_model} + [focus_model]
-        key_cols = key_path.map{|m|
-          Arel::Table.new(m.table_name)[m.primary_key]
-        }
-
         @aggregate_rels[focus_model] = {}
         data_models.each do |data_model|
           f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
           agg_path = nil
+          key_path = nil
           f2d_path.reverse.each do |link_model|
+            remainder = f2d_path.drop_while{|m| m != link_model}
             if @layers_path.include?(link_model)
-              agg_path = f2d_path.drop_while{|m| m != link_model}
+              agg_path = remainder
+              key_path = @layers_path.take(@layers_path.index(focus_model)+1)
               break
+            else
+              # Route it from the closest layer model
+              @layers_path.each_with_index do |layer, i|
+                p = self.class.path_thru([layer, link_model]) + remainder.drop(1)
+                if agg_path.nil? || p.size <= agg_path.size
+                  agg_path = p
+                  key_path = @layers_path.take(i+1)
+                end
+              end
             end
           end
-          # TODO: Properly handle focus model that is not in layer types list
-          fail unless agg_path
+
+          key_cols = key_path.map{|m|
+            Arel::Table.new(m.table_name)[m.primary_key]
+          }
 
           agg_data_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)

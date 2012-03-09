@@ -212,8 +212,6 @@ describe Mochigome::Query do
       [Owner, Store, Product],
       :aggregate_sources => [[Product, Sale]]
     )
-
-    tbl = Arel::Table.new(Owner.table_name)
     data_node = q.run
 
     assert_equal "Jane's Store (North)", (data_node/1/0).name
@@ -223,6 +221,36 @@ describe Mochigome::Query do
     assert_equal 16, (data_node/1)['Sales count']
 
     assert_equal 24, data_node['Sales count']
+  end
+
+  it "goes farther than layer list to include aggregate focus" do
+    q = Mochigome::Query.new(
+      [Owner, Store],
+      :aggregate_sources => [[Product, Sale]]
+    )
+    data_node = q.run
+
+    assert_equal "Jane's Store (North)", (data_node/1/0).name
+    assert_equal 11, (data_node/1/0)['Sales count']
+
+    assert_equal "Jane Doe", (data_node/1).name
+    assert_equal 16, (data_node/1)['Sales count']
+
+    assert_equal 24, data_node['Sales count']
+  end
+
+  it "does not collect aggregate data for layers below focus" do
+    q = Mochigome::Query.new(
+      [Owner, Store, Product, Category],
+      :aggregate_sources => [[Product, Sale]]
+    )
+    data_node = q.run
+
+    assert_equal "Product", (data_node/0/0/0)[:internal_type]
+    refute_nil (data_node/0/0/0)['Sales count']
+
+    assert_equal "Category", (data_node/0/0/0/0)[:internal_type]
+    assert_nil (data_node/0/0/0/0)['Sales count']
   end
 
   it "can do conditional counts" do
