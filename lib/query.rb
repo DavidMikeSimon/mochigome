@@ -30,8 +30,8 @@ module Mochigome
 
       @aggregate_rels = {}
       aggs_by_model.each do |focus_model, data_models|
-        # Need to do a relation over the entire path in case query runs
-        # on something other than the focus model layer.
+        # Need to do a relation over the entire path in case query has
+        # a condition on something other than the focus model layer.
         # TODO: Would be better to only do this if necesssitated by the
         # conditions supplied to the query when it is ran, and/or
         # the access filter.
@@ -42,8 +42,9 @@ module Mochigome
           f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
           agg_path = nil
           key_path = nil
-          f2d_path.reverse.each do |link_model|
+          f2d_path.each do |link_model|
             remainder = f2d_path.drop_while{|m| m != link_model}
+            next if (remainder.drop(1) & @layers_path).size > 0
             if @layers_path.include?(link_model)
               agg_path = remainder
               key_path = @layers_path.take(@layers_path.index(focus_model)+1)
@@ -52,11 +53,14 @@ module Mochigome
               # Route it from the closest layer model
               @layers_path.each_with_index do |layer, i|
                 p = self.class.path_thru([layer, link_model]) + remainder.drop(1)
+                next if (p.drop(1) & @layers_path).size > 0
+                next if p.uniq.size != p.size
                 if agg_path.nil? || p.size <= agg_path.size
                   agg_path = p
                   key_path = @layers_path.take(i+1)
                 end
               end
+              break if agg_path # Use as much of f2d_path as we can
             end
           end
 
