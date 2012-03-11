@@ -239,9 +239,6 @@ describe Mochigome::Query do
     assert_equal 24, data_node['Sales count']
   end
 
-  # TODO: Include test here against the bug I saw in JSAS where
-  # it would avoid including the focus if there was a shorter path.
-
   it "does not collect aggregate data for layers below focus" do
     q = Mochigome::Query.new(
       [Owner, Store, Product, Category],

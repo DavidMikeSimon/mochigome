@@ -51,16 +51,15 @@ module Mochigome
               break
             else
               # Route it from the closest layer model
-              @layers_path.each_with_index do |layer, i|
-                p = self.class.path_thru([layer, link_model]) + remainder.drop(1)
+              @layers_path.reverse.each do |layer|
+                p = self.class.path_thru([layer, link_model]) + remainder.drop(1) # TODO: Handle path_thru returning nil
                 next if (p.drop(1) & @layers_path).size > 0
                 next if p.uniq.size != p.size
-                if agg_path.nil? || p.size <= agg_path.size
+                if agg_path.nil? || p.size < agg_path.size
                   agg_path = p
-                  key_path = @layers_path.take(i+1)
+                  key_path = @layers_path
                 end
               end
-              break if agg_path # Use as much of f2d_path as we can
             end
           end
 
