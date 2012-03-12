@@ -291,7 +291,7 @@ module Mochigome
     end
 
     if vals.size == 1
-      vals << :id # TODO : Use real primary key
+      vals << :id # TODO : Use real primary key, only do this for appropriate agg funcs
     elsif vals.size != 2
       raise ModelSetupError.new "Wrong # of components for agg: #{obj.inspect}"
     end
