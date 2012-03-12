@@ -71,7 +71,7 @@ module Mochigome
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
           agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
-          agg_data_rel.project
+          agg_data_rel.project # FIXME ??? What is this for?
           agg_fields.each_with_index do |a, i|
             agg_data_rel.project(a[:value_proc].call(data_tbl).as("d#{i}"))
           end
@@ -85,6 +85,8 @@ module Mochigome
               end
               d_rel.where(cond) if cond
 
+              # FIXME: This subtable won't be necessary for all forms of aggregation.
+              # When we can avoid it, we should, because query performance is greatly increased.
               a_rel = Arel::SelectManager.new(
                 Arel::Table.engine,
                 Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
