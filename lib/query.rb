@@ -153,7 +153,7 @@ module Mochigome
                 c = data_tree
                 super_cols.each_with_index do |sc_num, sc_idx|
                   break if aggs_count+sc_idx >= row.size-1
-                  col_num = aggs_count + super_cols[sc_num]
+                  col_num = aggs_count + sc_num
                   c = (c[row[col_num].to_i] ||= {})
                 end
                 c[row.last.to_i] = row.take(aggs_count)
