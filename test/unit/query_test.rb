@@ -360,13 +360,6 @@ describe Mochigome::Query do
     end
   end
 
-  it "will not allow a query on targets of different types" do
-    q = Mochigome::Query.new([Owner, Store, Product])
-    assert_raises Mochigome::QueryError do
-      q.run([@store_x, @john])
-    end
-  end
-
   it "will not allow a query on targets not in the layer list" do
     q = Mochigome::Query.new([Product])
     assert_raises Mochigome::QueryError do
@@ -411,6 +404,13 @@ describe Mochigome::Query do
     end
     q = Mochigome::Query.new([Product, Store], :access_filter => af)
     assert_equal 1, q.instance_variable_get(:@ids_rel).to_sql.scan(/join .stores./i).size
+  end
+
+  it "complains if run given a condition on an unused table" do
+    q = Mochigome::Query.new([Product, Store])
+    assert_raises Mochigome::QueryError do
+      q.run(Arel::Table.new(Category.table_name)[:id].eq(41))
+    end
   end
 
   # TODO: Test that access filter join paths are followed, rather than closest path

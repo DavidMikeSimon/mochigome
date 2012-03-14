@@ -6,7 +6,7 @@ module Mochigome
     def initialize(layer_types, options = {})
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
-      @layers_path = self.class.path_thru(layer_types)
+      @layers_path = self.class.path_thru(layer_types) # TODO: What if there is no good path?
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
@@ -71,7 +71,6 @@ module Mochigome
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
           data_tbl = Arel::Table.new(data_model.table_name)
           agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
-          agg_data_rel.project # FIXME ??? What is this for?
           agg_fields.each_with_index do |a, i|
             agg_data_rel.project(a[:value_proc].call(data_tbl).as("d#{i}"))
           end
@@ -115,14 +114,18 @@ module Mochigome
       end
       if cond.is_a?(Array)
         return root if cond.empty?
-        unless cond.all?{|obj| obj.class == cond.first.class}
-          raise QueryError.new("Query target objects must all be the same type")
+        cond = cond.inject(nil) do |expr, obj|
+          cls = obj.class
+          tbl = Arel::Table.new(cls.table_name)
+          subexpr = tbl[cls.primary_key].eq(obj.id)
+          expr ? expr.or(subexpr) : subexpr
         end
-        unless @layer_types.any?{|layer| cond.first.is_a?(layer)}
-          raise QueryError.new("Query target's class must be in layer list")
+      end
+      if cond
+        self.class.expr_tables(cond).each do |t|
+          raise QueryError.new("Condition table #{t} not in layer list") unless
+            @layers_path.any?{|m| m.table_name == t}
         end
-        cls = cond.first.class
-        cond = Arel::Table.new(cls.table_name)[cls.primary_key].in(cond.map(&:id))
       end
 
       q = @ids_rel.dup
@@ -263,13 +266,25 @@ module Mochigome
 
     # TODO: Move the stuff below into its own module
 
+    def self.expr_tables(e)
+      # TODO: This is kind of hacky, Arel probably has a better way
+      # to do this with its API.
+      r = Set.new
+      [:expr, :left, :right].each do |m|
+        r += expr_tables(e.send(m)) if e.respond_to?(m)
+      end
+      r.add e.relation.name if e.respond_to?(:relation)
+      r
+    end
+
     @@graphed_models = Set.new
     @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@edge_relation_funcs = {}
     @@shortest_paths = {}
 
     def self.relation_over_path(path, rel = nil)
-      rel ||= Arel::Table.new(path.first.table_name)
+      # Project ensures that we don't return a Table even if path is empty
+      rel ||= Arel::Table.new(path.first.table_name).project
       (0..(path.size-2)).each do |i|
         rel = relation_func(path[i], path[i+1]).call(rel)
       end
