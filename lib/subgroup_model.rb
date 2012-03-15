@@ -57,7 +57,8 @@ module Mochigome
       recs = c[@attr].map do |val|
         SubgroupPseudoRecord.new(self, val)
       end
-      # TODO: Support ordering
+      # TODO: Support some kind of custom ordering
+      recs.sort!{|a,b| a.value <=> b.value}
       recs
     end
   end

@@ -172,10 +172,10 @@ describe Mochigome::Query do
       [Mochigome::SubgroupModel.new(Owner, :last_name), Owner, Store, Product]
     )
     data_node = q.run
-    assert_equal "Smith", (data_node/0).name
-    assert_equal "John Smith", (data_node/0/0).name
-    assert_equal "John's Store", (data_node/0/0/0).name
-    assert_equal "Product A", (data_node/0/0/0/0).name
+    assert_equal "Smith", (data_node/1).name
+    assert_equal "John Smith", (data_node/1/0).name
+    assert_equal "John's Store", (data_node/1/0/0).name
+    assert_equal "Product A", (data_node/1/0/0/0).name
   end
 
   it "collects aggregate data by grouping on all layers" do
