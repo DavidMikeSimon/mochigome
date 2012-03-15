@@ -6,7 +6,7 @@ module Mochigome
     def initialize(layer_types, options = {})
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
       @layer_types = layer_types
-      @layers_path = self.class.path_thru(layer_types) # TODO: What if there is no good path?
+      @layers_path = self.class.path_thru(@layer_types) # TODO: What if there is no good path?
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
@@ -16,9 +16,7 @@ module Mochigome
       end
 
       @ids_rel = self.class.relation_over_path(@layers_path).
-        project(@layers_path.map{|m|
-          Arel::Table.new(m.table_name)[m.primary_key]
-        })
+        project(@layers_path.map{|m| m.arel_primary_key})
       @ids_rel = access_filtered_relation(@ids_rel, @layers_path)
 
       # TODO: Validate that aggregate_sources is in the correct format
@@ -136,7 +134,10 @@ module Mochigome
       q = @ids_rel.dup
       q.where(cond) if cond
       ids_table = @layer_types.first.connection.select_rows(q.to_sql)
-      ids_table = ids_table.map{|row| row.map{|cell| cell.to_i}}
+      ids_table = ids_table.map do |row|
+        # FIXME: Should do this conversion based on type of column
+        row.map{|cell| cell =~ /^\d+$/ ? cell.to_i : cell}
+      end
 
       fill_layers(ids_table, {:root => root}, @layer_types)
 
@@ -231,7 +232,7 @@ module Mochigome
         dn.merge!(f.field_data)
         # TODO: Maybe make special fields below part of ModelExtensions?
         dn[:id] = obj.id
-        dn[:internal_type] = obj.class.name
+        dn[:internal_type] = model.name
 
         if parent_col_num
           duping = false
@@ -289,9 +290,10 @@ module Mochigome
 
     def self.relation_over_path(path, rel = nil)
       # Project ensures that we don't return a Table even if path is empty
-      rel ||= Arel::Table.new(path.first.table_name).project
-      (0..(path.size-2)).each do |i|
-        rel = relation_func(path[i], path[i+1]).call(rel)
+      real_path = path.select{|e| e.real_model?}
+      rel ||= Arel::Table.new(real_path.first.table_name).project
+      (0..(real_path.size-2)).each do |i|
+        rel = relation_func(real_path[i], real_path[i+1]).call(rel)
       end
       rel
     end
@@ -308,9 +310,24 @@ module Mochigome
         u = models[i]
         v = models[i+1]
         next if u == v
-        seg = @@shortest_paths[[u,v]]
-        raise QueryError.new("Can't travel from #{u.name} to #{v.name}") unless seg
-        seg.drop(1).each{|step| path << step}
+        if u.is_a?(SubgroupModel)
+          # TODO: Test this requirement. And, can we avoid it somehow?
+          if u.model == v || (v.is_a?(SubgroupModel) && u.model == v.model)
+            path << v
+          else
+            raise QueryError.new("#{u.name} must preceed #{u.model.name}")
+          end
+        elsif v.is_a?(SubgroupModel)
+          if i == models.size-2
+            raise QueryError.new("Cannot end path on subgrouping #{v.name}")
+          end
+        else
+          seg = @@shortest_paths[[u,v]]
+          unless seg
+            raise QueryError.new("Can't travel from #{u.name} to #{v.name}")
+          end
+          seg.drop(1).each{|step| path << step}
+        end
       end
       unless path.uniq.size == path.size
         raise QueryError.new(
@@ -326,6 +343,7 @@ module Mochigome
       added_models = []
       until model_queue.empty?
         model = model_queue.shift
+        next if model.is_a?(SubgroupModel)
         next if @@graphed_models.include? model
         @@graphed_models.add model
         added_models << model

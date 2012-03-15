@@ -12,6 +12,19 @@ module Mochigome
     end
 
     module ClassMethods
+      def real_model?
+        true
+      end
+
+      # TODO: Use this instead of calling Table.new all over the place
+      def arel_table
+        Arel::Table.new(table_name)
+      end
+
+      def arel_primary_key
+        arel_table[primary_key]
+      end
+
       def acts_as_mochigome_focus
         if self.try(:mochigome_focus_settings).try(:model) == self
           raise Mochigome::ModelSetupError.new("Already acts_as_mochigome_focus for #{self.name}")
