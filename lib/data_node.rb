@@ -41,6 +41,12 @@ module Mochigome
       @children[idx]
     end
 
+    def dup
+      twin = super
+      twin.instance_variable_set(:@children, @children.map{|c| c.dup})
+      twin
+    end
+
     # TODO: Only define xml-related methods if nokogiri loaded
     def to_xml
       doc = Nokogiri::XML::Document.new
