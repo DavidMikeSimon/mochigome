@@ -139,7 +139,7 @@ module Mochigome
         row.map{|cell| cell =~ /^\d+$/ ? cell.to_i : cell}
       end
 
-      fill_layers(ids_table, {:root => root}, @layer_types)
+      fill_layers(ids_table, {[] => root}, @layer_types)
 
       @aggregate_rels.each do |focus_model, data_model_rels|
         super_types = @layer_types.take_while{|m| m != focus_model}
@@ -205,7 +205,7 @@ module Mochigome
       r
     end
 
-    def fill_layers(ids_table, parents, types, parent_col_num = nil)
+    def fill_layers(ids_table, parents, types, parent_col_nums = [])
       return if types.size == 0
 
       model = types.first
@@ -216,10 +216,8 @@ module Mochigome
       ids_table.each do |row|
         cur_id = row[col_num]
         layer_ids.add cur_id
-        if parent_col_num
-          cur_to_parent[cur_id] ||= Set.new
-          cur_to_parent[cur_id].add row[parent_col_num]
-        end
+        cur_to_parent[cur_id] ||= Set.new
+        cur_to_parent[cur_id].add parent_col_nums.map{|i| row[i]}
       end
 
       layer = {}
@@ -230,23 +228,19 @@ module Mochigome
         f = obj.mochigome_focus
         dn = DataNode.new(f.type_name, f.name)
         dn.merge!(f.field_data)
+
         # TODO: Maybe make special fields below part of ModelExtensions?
         dn[:id] = obj.id
         dn[:internal_type] = model.name
 
-        if parent_col_num
-          duping = false
-          cur_to_parent.fetch(obj.id).each do |parent_id|
-            parents.fetch(parent_id) << (duping ? dn.dup : dn)
-            duping = true
-          end
-        else
-          parents[:root] << dn
+        cur_to_parent.fetch(obj.id).each do |parent_ids_seq|
+          duped = dn.dup
+          parents.fetch(parent_ids_seq) << duped
+          layer[parent_ids_seq + [obj.id]] = duped
         end
-        layer[obj.id] = dn
       end
 
-      fill_layers(ids_table, layer, types.drop(1), col_num)
+      fill_layers(ids_table, layer, types.drop(1), parent_col_nums + [col_num])
     end
 
     def insert_aggregate_data_fields(node, table, data_model)

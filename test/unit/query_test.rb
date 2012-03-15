@@ -178,6 +178,8 @@ describe Mochigome::Query do
     assert_equal "Product A", (data_node/1/0/0/0).name
   end
 
+  # TODO: Test diamond patterns in subgrouping
+
   it "collects aggregate data by grouping on all layers" do
     q = Mochigome::Query.new(
       [Owner, Store, Product],
