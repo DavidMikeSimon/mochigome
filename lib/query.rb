@@ -23,7 +23,12 @@ module Mochigome
 
       # TODO: Validate that aggregate_sources is in the correct format
       aggs_by_model = {}
-      aggregate_sources.each do |focus_cls, data_cls|
+      aggregate_sources.each do |a|
+        if a.instance_of?(Array)
+          focus_cls, data_cls = a.first, a.second
+        else
+          focus_cls, data_cls = a, a
+        end
         aggs_by_model[focus_cls] ||= []
         aggs_by_model[focus_cls] << data_cls
       end

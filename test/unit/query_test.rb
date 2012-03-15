@@ -190,6 +190,23 @@ describe Mochigome::Query do
     assert_equal 2, (data_node/1/0/0)['Sales count']
   end
 
+  it "collects aggregate data using data model as focus if focus not supplied" do
+    q = Mochigome::Query.new(
+      [Owner, Store, Product],
+      :aggregate_sources => [Sale]
+    )
+
+    data_node = q.run
+
+    assert_equal "Jane's Store (North)", (data_node/1/0).name
+    assert_equal 11, (data_node/1/0)['Sales count']
+
+    assert_equal "Jane Doe", (data_node/1).name
+    assert_equal 16, (data_node/1)['Sales count']
+
+    assert_equal 24, data_node['Sales count']
+  end
+
   it "collects aggregate data on layers above the focus" do
     q = Mochigome::Query.new(
       [Owner, Store, Product],
