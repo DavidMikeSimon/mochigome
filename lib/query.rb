@@ -43,7 +43,12 @@ module Mochigome
 
         @aggregate_rels[focus_model] = {}
         data_models.each do |data_model|
-          f2d_path = self.class.path_thru([focus_model, data_model]) #TODO: Handle nil here
+          if focus_model == data_model
+            f2d_path = [focus_model]
+          else
+            #TODO: Handle nil here
+            f2d_path = self.class.path_thru([focus_model, data_model])
+          end
           agg_path = nil
           key_path = nil
           f2d_path.each do |link_model|
@@ -283,7 +288,7 @@ module Mochigome
 
     def self.relation_over_path(path, rel = nil)
       # Project ensures that we don't return a Table even if path is empty
-      real_path = path.select{|e| e.real_model?}
+      real_path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
       rel ||= Arel::Table.new(real_path.first.table_name).project
       (0..(real_path.size-2)).each do |i|
         rel = relation_func(real_path[i], real_path[i+1]).call(rel)
@@ -298,29 +303,21 @@ module Mochigome
 
     def self.path_thru(models)
       update_assoc_graph(models)
-      path = [models.first]
-      (0..(models.size-2)).each do |i|
-        u = models[i]
-        v = models[i+1]
-        next if u == v
-        if u.is_a?(SubgroupModel)
-          # TODO: Test this requirement. And, can we avoid it somehow?
-          if u.model == v || (v.is_a?(SubgroupModel) && u.model == v.model)
-            path << v
-          else
-            raise QueryError.new("#{u.name} must preceed #{u.model.name}")
-          end
-        elsif v.is_a?(SubgroupModel)
-          if i == models.size-2
-            raise QueryError.new("Cannot end path on subgrouping #{v.name}")
-          end
-        else
-          seg = @@shortest_paths[[u,v]]
+      model_queue = models.dup
+      path = [model_queue.shift]
+      until model_queue.empty?
+        src = path.last
+        tgt = model_queue.shift
+        real_src = src.real_model? ? src : src.model
+        real_tgt = tgt.real_model? ? tgt : tgt.model
+        unless real_src == real_tgt
+          seg = @@shortest_paths[[real_src,real_tgt]]
           unless seg
-            raise QueryError.new("Can't travel from #{u.name} to #{v.name}")
+            raise QueryError.new("No path: #{real_src.name} to #{real_tgt.name}")
           end
-          seg.drop(1).each{|step| path << step}
+          path.concat seg.take(seg.size-1).drop(1)
         end
+        path << tgt
       end
       unless path.uniq.size == path.size
         raise QueryError.new(
