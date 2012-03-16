@@ -7,7 +7,7 @@ gem 'ruport'
 gem 'rgl'
 
 gem 'sqlite3'
-gem 'mysql'
+gem 'mysql2', '~> 0.2.0'
 gem 'factory_girl', '2.0.4'
 gem 'rdoc'
 gem 'rcov'

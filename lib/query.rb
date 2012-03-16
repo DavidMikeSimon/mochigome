@@ -4,9 +4,10 @@ require 'rgl/traversal'
 module Mochigome
   class Query
     def initialize(layer_types, options = {})
-      # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus, graph correctly, no repeats
+      # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
-      @layers_path = self.class.path_thru(@layer_types) # TODO: What if there is no good path?
+      @layers_path = self.class.path_thru(@layer_types)
+      @layers_path or raise QueryError.new("No valid path thru layer list") #TODO Test
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
@@ -66,9 +67,7 @@ module Mochigome
             end
           end
 
-          key_cols = key_path.map{|m|
-            Arel::Table.new(m.table_name)[m.primary_key]
-          }
+          key_cols = key_path.map{|m| m.arel_primary_key }
 
           agg_data_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
@@ -160,9 +159,9 @@ module Mochigome
                 super_cols.each_with_index do |sc_num, sc_idx|
                   break if aggs_count+sc_idx >= row.size-1
                   col_num = aggs_count + sc_num
-                  c = (c[row[col_num].to_i] ||= {})
+                  c = (c[row[col_num]] ||= {})
                 end
-                c[row.last.to_i] = row.take(aggs_count)
+                c[row.last] = row.take(aggs_count)
               end
             end
             insert_aggregate_data_fields(root, data_tree, data_model)

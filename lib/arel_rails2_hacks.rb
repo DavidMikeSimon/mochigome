@@ -42,7 +42,7 @@ unless ActiveRecord::ConnectionAdapters::ConnectionPool.methods.include?("table_
   class ActiveRecord::ConnectionAdapters::SQLiteAdapter
     def select_rows(sql, name = nil)
       execute(sql, name).map do |row|
-        row.keys.select{|key| key.is_a? Integer}.map{|key| row[key]}
+        row.keys.select{|key| key.is_a? Integer}.sort.map{|key| row[key]}
       end
     end
   end

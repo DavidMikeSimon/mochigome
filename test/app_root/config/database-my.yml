@@ -1,4 +1,4 @@
 test:
-  adapter: mysql
-  database: "mochigome_testing"
+  adapter: mysql2
+  database: "mochi_test"
   username: root

@@ -178,7 +178,7 @@ describe Mochigome::Query do
     assert_equal "Product A", (data_node/1/0/0/0).name
   end
 
-  # TODO: Test diamond patterns in subgrouping
+  # TODO: Test diamond patterns
 
   it "collects aggregate data by grouping on all layers" do
     q = Mochigome::Query.new(
@@ -201,6 +201,23 @@ describe Mochigome::Query do
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/0/0).name
     assert_equal 2, (data_node/1/0/0)['Sales count']
+  end
+
+  it "collects aggregate data in subgroups" do
+    q = Mochigome::Query.new(
+      [Mochigome::SubgroupModel.new(Owner, :last_name), Owner, Store, Product],
+      :aggregate_sources => [[Product, Sale]]
+    )
+    data_node = q.run
+
+    assert_equal "Smith", (data_node/1).name
+    assert_equal 8, (data_node/1)['Sales count']
+    assert_equal "John Smith", (data_node/1/0).name
+    assert_equal 8, (data_node/1/0)['Sales count']
+    assert_equal "John's Store", (data_node/1/0/0).name
+    assert_equal 8, (data_node/1/0/0)['Sales count']
+    assert_equal "Product A", (data_node/1/0/0/0).name
+    assert_equal 5, (data_node/1/0/0/0)['Sales count']
   end
 
   it "collects aggregate data using data model as focus if focus not supplied" do

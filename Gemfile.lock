@@ -23,7 +23,7 @@ GEM
     minitest (2.5.0)
     mynyml-redgreen (0.7.1)
       term-ansicolor (>= 1.0.4)
-    mysql (2.8.1)
+    mysql2 (0.2.18)
     nokogiri (1.5.0)
     pdf-writer (1.1.8)
       color (>= 1.4.0)
@@ -64,7 +64,7 @@ DEPENDENCIES
   factory_girl (= 2.0.4)
   minitest
   mynyml-redgreen
-  mysql
+  mysql2 (~> 0.2.0)
   nokogiri
   rails (= 2.3.12)
   rcov
