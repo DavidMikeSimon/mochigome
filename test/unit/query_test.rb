@@ -447,7 +447,7 @@ describe Mochigome::Query do
       }
     end
     q = Mochigome::Query.new([Product], :access_filter => af)
-    dn = q.run(Product.all) # FIXME: Need a better way of doing "all objs" queries
+    dn = q.run
     assert_equal 4, dn.children.size
     refute dn.children.any?{|c| c.name == "Product E"}
   end
@@ -461,7 +461,7 @@ describe Mochigome::Query do
       }
     end
     q = Mochigome::Query.new([Product], :access_filter => af)
-    dn = q.run(Product.all) # FIXME: Need a better way of doing "all objs" queries
+    dn = q.run
     assert_equal 2, dn.children.size
     refute dn.children.any?{|c| c.name == "Product E"}
   end
