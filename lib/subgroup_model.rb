@@ -50,11 +50,12 @@ module Mochigome
     end
 
     def all(options = {})
+      puts "OPTIONS: #{options.inspect}"
       c = options[:conditions]
       unless c.is_a?(Hash) && c.size == 1 && c[@attr].is_a?(Array)
         raise QueryError.new("Invalid conditions given to SubgroupModel#all")
       end
-      recs = c[@attr].map do |val|
+      recs = c[@attr].compact.map do |val|
         SubgroupPseudoRecord.new(self, val)
       end
       # TODO: Support some kind of custom ordering

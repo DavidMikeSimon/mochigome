@@ -76,16 +76,15 @@ module Mochigome
 
           agg_data_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
-          data_tbl = Arel::Table.new(data_model.table_name)
           agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
           agg_fields.each_with_index do |a, i|
-            agg_data_rel.project(a[:value_proc].call(data_tbl).as("d#{i}"))
+            agg_data_rel.project(a[:value_proc].call(data_model.arel_table).as("d#{i}"))
           end
 
           @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
             lambda {|cond|
               d_rel = agg_data_rel.dup
-              d_cols = key_cols.take(n) + [Arel::Table.new(data_model.table_name)[data_model.primary_key]]
+              d_cols = key_cols.take(n) + [data_model.arel_primary_key]
               d_cols.each_with_index do |col, i|
                 d_rel.project(col.as("g#{i}")).group(col)
               end
@@ -122,16 +121,14 @@ module Mochigome
       if cond.is_a?(Array)
         return root if cond.empty?
         cond = cond.inject(nil) do |expr, obj|
-          cls = obj.class
-          tbl = Arel::Table.new(cls.table_name)
-          subexpr = tbl[cls.primary_key].eq(obj.id)
+          subexpr = cls.arel_primary_key.eq(obj.id)
           expr ? expr.or(subexpr) : subexpr
         end
       end
       if cond
         self.class.expr_tables(cond).each do |t|
           raise QueryError.new("Condition table #{t} not in layer list") unless
-            @layers_path.any?{|m| m.table_name == t}
+            @layers_path.any?{|m| m.real_model? && m.table_name == t}
         end
       end
 
@@ -287,9 +284,9 @@ module Mochigome
     @@shortest_paths = {}
 
     def self.relation_over_path(path, rel = nil)
-      # Project ensures that we don't return a Table even if path is empty
       real_path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
-      rel ||= Arel::Table.new(real_path.first.table_name).project
+      # Project ensures that we return a Rel, not a Table, even if path is empty
+      rel ||= real_path.first.arel_table.project
       (0..(real_path.size-2)).each do |i|
         rel = relation_func(real_path[i], real_path[i+1]).call(rel)
       end
