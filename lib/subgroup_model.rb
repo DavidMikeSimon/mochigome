@@ -50,7 +50,6 @@ module Mochigome
     end
 
     def all(options = {})
-      puts "OPTIONS: #{options.inspect}"
       c = options[:conditions]
       unless c.is_a?(Hash) && c.size == 1 && c[@attr].is_a?(Array)
         raise QueryError.new("Invalid conditions given to SubgroupModel#all")
