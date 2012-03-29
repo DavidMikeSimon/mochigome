@@ -121,7 +121,7 @@ module Mochigome
       if cond.is_a?(Array)
         return root if cond.empty?
         cond = cond.inject(nil) do |expr, obj|
-          subexpr = cls.arel_primary_key.eq(obj.id)
+          subexpr = obj.class.arel_primary_key.eq(obj.id)
           expr ? expr.or(subexpr) : subexpr
         end
       end
