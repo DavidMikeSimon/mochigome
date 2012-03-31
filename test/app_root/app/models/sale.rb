@@ -1,6 +1,10 @@
 class Sale < ActiveRecord::Base
   has_mochigome_aggregations do |a|
-    a.fields [:count]
+    a.fields [:count, {
+      "Gross" => [:sum, lambda {|t|
+        Product.arel_table[:price]
+      }, {:joins => [Product]}]
+    }]
   end
 
   belongs_to :store_product

@@ -305,13 +305,13 @@ module Mochigome
 
     if vals.size == 1
       vals << :id # TODO : Use real primary key, only do this for appropriate agg funcs
-    elsif vals.size != 2
+    elsif vals.empty? || vals.size > 3
       raise ModelSetupError.new "Wrong # of components for agg: #{obj.inspect}"
     end
 
     {
-      :agg_proc => aggregation_proc(vals.first),
-      :value_proc => value_proc(vals.last)
-    }
+      :agg_proc => aggregation_proc(vals[0]),
+      :value_proc => value_proc(vals[1])
+    }.merge(vals[2] || {})
   end
 end

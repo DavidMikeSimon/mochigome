@@ -77,8 +77,27 @@ module Mochigome
           agg_data_rel = self.class.relation_over_path(agg_path, focus_rel.dup)
           agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
           agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
+          agg_joined_models = @layers_path + agg_path
           agg_fields.each_with_index do |a, i|
-            agg_data_rel.project(a[:value_proc].call(data_model.arel_table).as("d#{i}"))
+            (a[:joins] || []).each do |m|
+              unless agg_joined_models.include?(m)
+                cand = nil
+                agg_joined_models.each do |agg_join_src_m|
+                  p = self.class.path_thru([agg_join_src_m, m])
+                  if p && (cand.nil? || p.size < cand.size)
+                    cand = p
+                  end
+                end
+                if cand
+                  agg_data_rel = self.class.relation_over_path(cand, agg_data_rel)
+                  agg_joined_models += cand
+                else
+                  raise QueryError.new("Can't join from query to agg join model #{m.name}") # TODO: Test this
+                end
+              end
+            end
+            d_expr = a[:value_proc].call(data_model.arel_table)
+            agg_data_rel.project(d_expr.as("d#{i}"))
           end
 
           @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
@@ -90,8 +109,8 @@ module Mochigome
               end
               d_rel.where(cond) if cond
 
-              # FIXME: This subtable won't be necessary for all forms of aggregation.
-              # When we can avoid it, we should, because query performance is greatly increased.
+              # FIXME: This subtable won't be necessary for all aggregation funcs.
+              # When we can avoid it, we should, for performance.
               a_rel = Arel::SelectManager.new(
                 Arel::Table.engine,
                 Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
@@ -267,6 +286,7 @@ module Mochigome
 
     # TODO: Move the stuff below into its own module
 
+    # Take an expression and return a Set of all tables it references
     def self.expr_tables(e)
       # TODO: This is kind of hacky, Arel probably has a better way
       # to do this with its API.
