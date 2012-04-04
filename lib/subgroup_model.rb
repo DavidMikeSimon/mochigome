@@ -14,7 +14,7 @@ module Mochigome
     end
 
     def name
-      "#{@model}%#{@attr}"
+      "#{@model}$#{@attr}" # Warning: This has to be a valid SQL field name
     end
 
     def human_name

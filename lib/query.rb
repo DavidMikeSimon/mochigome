@@ -12,7 +12,7 @@ module Mochigome
         raise QueryError.new("Unknown options: #{options.keys.inspect}")
       end
 
-      @ids_rel = ReflectiveJoinRelation.new(@layer_types)
+      @ids_rel = Relation.new(@layer_types)
       @ids_rel.apply_access_filter_func(@access_filter)
 
       # TODO: Validate that aggregate_sources is in the correct format
@@ -148,14 +148,9 @@ module Mochigome
 
       r = @ids_rel.dup
       r.apply_condition(cond) if cond
-      q = r.to_arel.project(@layers_path.map{|m| m.arel_primary_key}).to_sql
-      ids_table = @layer_types.first.connection.select_rows(q)
-      ids_table = ids_table.map do |row|
-        # FIXME: Should do this conversion based on type of column
-        row.map{|cell| cell =~ /^\d+$/ ? cell.to_i : cell}
-      end
+      ids_table = @layer_types.first.connection.select_all(r.to_sql)
 
-      fill_layers(ids_table, {[] => root}, @layer_types)
+      fill_layers(ids_table, {[] => root}, @layer_types.dup)
 
       @aggregate_rels.each do |focus_model, data_model_rels|
         super_types = @layer_types.take_while{|m| m != focus_model}
@@ -221,19 +216,18 @@ module Mochigome
       r
     end
 
-    def fill_layers(ids_table, parents, types, parent_col_nums = [])
+    def fill_layers(ids_table, parents, types, parent_types = [])
       return if types.size == 0
 
-      model = types.first
-      col_num = @layers_path.find_index(model)
+      model = types.shift
       layer_ids = Set.new
       cur_to_parent = {}
 
       ids_table.each do |row|
-        cur_id = row[col_num]
+        cur_id = row["#{model.name}_id"]
         layer_ids.add cur_id
         cur_to_parent[cur_id] ||= Set.new
-        cur_to_parent[cur_id].add parent_col_nums.map{|i| row[i]}
+        cur_to_parent[cur_id].add parent_types.map{|m| row["#{m.name}_id"]}
       end
 
       layer = {}
@@ -256,7 +250,7 @@ module Mochigome
         end
       end
 
-      fill_layers(ids_table, layer, types.drop(1), parent_col_nums + [col_num])
+      fill_layers(ids_table, layer, types, parent_types + [model])
     end
 
     def insert_aggregate_data_fields(node, table, data_model)
@@ -283,13 +277,15 @@ module Mochigome
 
   private
 
-  class ReflectiveJoinRelation
+  class Relation
     def initialize(layers)
       @spine_layers = layers
       @spine = ModelGraph.path_thru(layers) or
         raise QueryError.new("No valid path thru #{layers.inspect}") #TODO Test
       @models = Set.new @spine
       @rel = ModelGraph.relation_over_path(@spine)
+
+      @spine_layers.each{|m| select_model_id(m)}
     end
 
     def to_arel
@@ -329,6 +325,10 @@ module Mochigome
       (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
         add_join_link src, tgt
       end
+    end
+
+    def select_model_id(m)
+      @rel = @rel.project(m.arel_primary_key.as("#{m.name}_id"))
     end
 
     def apply_condition(cond)

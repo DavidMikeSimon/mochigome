@@ -39,6 +39,7 @@ unless ActiveRecord::ConnectionAdapters::ConnectionPool.methods.include?("table_
     end
   end
 
+  # FIXME: Shouldn't use select_rows anymore
   class ActiveRecord::ConnectionAdapters::SQLiteAdapter
     def select_rows(sql, name = nil)
       execute(sql, name).map do |row|
