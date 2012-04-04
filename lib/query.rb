@@ -150,7 +150,7 @@ module Mochigome
       r.apply_condition(cond) if cond
       ids_table = @layer_types.first.connection.select_all(r.to_sql)
 
-      fill_layers(ids_table, {[] => root}, @layer_types.dup)
+      fill_layers(ids_table, {[] => root}, @layer_types)
 
       @aggregate_rels.each do |focus_model, data_model_rels|
         super_types = @layer_types.take_while{|m| m != focus_model}
@@ -216,13 +216,14 @@ module Mochigome
       r
     end
 
-    def fill_layers(ids_table, parents, types, parent_types = [])
-      return if types.size == 0
+    def fill_layers(ids_table, parents, types, type_idx = 0)
+      return if type_idx >= types.size
 
-      model = types.shift
+      model = types[type_idx]
       layer_ids = Set.new
       cur_to_parent = {}
 
+      parent_types = types.take(type_idx)
       ids_table.each do |row|
         cur_id = row["#{model.name}_id"]
         layer_ids.add cur_id
@@ -250,7 +251,7 @@ module Mochigome
         end
       end
 
-      fill_layers(ids_table, layer, types, parent_types + [model])
+      fill_layers(ids_table, layer, types, type_idx + 1)
     end
 
     def insert_aggregate_data_fields(node, table, data_model)
@@ -289,7 +290,7 @@ module Mochigome
     end
 
     def to_arel
-      @rel.project # FIXME Should I trust and use Arel's dup function instead?
+      @rel.project # FIXME Should I use Arel's dup function instead?
     end
 
     def to_sql
