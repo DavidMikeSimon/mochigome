@@ -4,7 +4,6 @@ module Mochigome
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
       @layers_path = ModelGraph.path_thru(@layer_types)
-      @layers_path or raise QueryError.new("No valid path thru layer list") #TODO Test
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
@@ -13,9 +12,8 @@ module Mochigome
         raise QueryError.new("Unknown options: #{options.keys.inspect}")
       end
 
-      @ids_rel = ModelGraph.relation_over_path(@layers_path).
-        project(@layers_path.map{|m| m.arel_primary_key})
-      @ids_rel = access_filtered_relation(@ids_rel, @layers_path)
+      @ids_rel = ReflectiveJoinRelation.new(@layer_types)
+      @ids_rel.apply_access_filter_func(@access_filter)
 
       # TODO: Validate that aggregate_sources is in the correct format
       aggs_by_model = {}
@@ -148,9 +146,10 @@ module Mochigome
         end
       end
 
-      q = @ids_rel.dup
-      q.where(cond) if cond
-      ids_table = @layer_types.first.connection.select_rows(q.to_sql)
+      r = @ids_rel.dup
+      r.apply_condition(cond) if cond
+      q = r.to_arel.project(@layers_path.map{|m| m.arel_primary_key}).to_sql
+      ids_table = @layer_types.first.connection.select_rows(q)
       ids_table = ids_table.map do |row|
         # FIXME: Should do this conversion based on type of column
         row.map{|cell| cell =~ /^\d+$/ ? cell.to_i : cell}
@@ -279,6 +278,87 @@ module Mochigome
           insert_aggregate_data_fields(c, subtable, data_model)
         end
       end
+    end
+  end
+
+  private
+
+  class ReflectiveJoinRelation
+    def initialize(layers)
+      @spine_layers = layers
+      @spine = ModelGraph.path_thru(layers) or
+        raise QueryError.new("No valid path thru #{layers.inspect}") #TODO Test
+      @models = Set.new @spine
+      @rel = ModelGraph.relation_over_path(@spine)
+    end
+
+    def to_arel
+      @rel.project # FIXME Should I trust and use Arel's dup function instead?
+    end
+
+    def to_sql
+      @rel.to_sql
+    end
+
+    def clone
+      c = super
+      c.instance_variable_set :@spine, @spine.dup
+      c.instance_variable_set :@models, @models.dup
+      c.instance_variable_set :@rel, @rel.project
+      c
+    end
+
+    def join_to_model(model)
+      return if @models.include?(model)
+
+      # Route to it in as few steps as possible, closer to spine end if tie.
+      best_path = nil
+      (@spine.reverse + (@models.to_a - @spine)).each do |link_model|
+        path = ModelGraph.path_thru([link_model, model])
+        if path && (best_path.nil? || path.size < best_path.size)
+          best_path = path
+        end
+      end
+
+      raise QueryError.new("No path to #{model}") unless best_path
+      join_on_path(best_path)
+    end
+
+    def join_on_path(path)
+      path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
+      (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
+        add_join_link src, tgt
+      end
+    end
+
+    def apply_condition(cond)
+      # TODO: Join if necessary
+      @rel = @rel.where(cond)
+    end
+
+    def apply_access_filter_func(func)
+      @models.each do |m|
+        h = func.call(m)
+        h.delete(:join_paths).try :each do |path|
+          join_on_path path
+        end
+        if h[:condition]
+          apply_condition h.delete(:condition)
+        end
+        unless h.empty?
+          raise QueryError.new("Unknown assoc filter keys #{h.keys.inspect}")
+        end
+      end
+    end
+
+    private
+
+    def add_join_link(src, tgt)
+      raise QueryError.new("Can't join from #{src}, not available") unless
+        @models.include?(src)
+      return if @models.include?(tgt) # TODO Maybe still apply join conditions?
+      @rel = ModelGraph.relation_func(src, tgt).call(@rel)
+      @models.add tgt
     end
   end
 end
