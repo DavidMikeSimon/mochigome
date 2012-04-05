@@ -65,13 +65,6 @@ describe Mochigome::Query do
     assert_empty obj.children
   end
 
-  it "returns an empty DataNode if given an empty array" do
-    q = Mochigome::Query.new([Category, Product])
-    data_node = q.run([])
-    assert_empty data_node
-    assert_no_children data_node
-  end
-
   it "returns all possible results if no conditions given" do
     q = Mochigome::Query.new([Category, Product])
     data_node = q.run()

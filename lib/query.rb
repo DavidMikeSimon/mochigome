@@ -7,6 +7,7 @@ module Mochigome
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
+      # TODO: Validate that aggregate_sources is in the correct format
       aggregate_sources = options.delete(:aggregate_sources) || []
       unless options.empty?
         raise QueryError.new("Unknown options: #{options.keys.inspect}")
@@ -15,13 +16,11 @@ module Mochigome
       @ids_rel = Relation.new(@layer_types)
       @ids_rel.apply_access_filter_func(@access_filter)
 
-      # TODO: Validate that aggregate_sources is in the correct format
       @aggregate_rels = {}
       aggregate_sources.each do |a|
-        if a.instance_of?(Array)
-          focus_model, data_model = a.first, a.second
-        else
-          focus_model, data_model = a, a
+        focus_model, data_model = case a
+          when Array then [a.first, a.second]
+          else [a, a]
         end
 
         agg_rel = Relation.new(@layer_types) # TODO Only go as far as focus
@@ -44,81 +43,45 @@ module Mochigome
         @aggregate_rels[focus_model] ||= {}
         @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
           lambda {|cond|
-            d_rel = agg_rel.to_arel
-            d_cols = key_cols.take(n) + [data_model.arel_primary_key]
-            d_cols.each_with_index do |col, i|
-              d_rel.project(col.as("g%03u" % i)).group(col)
+            data_rel = agg_rel.clone
+            data_rel.apply_condition(cond)
+            data_cols = key_cols.take(n) + [data_model.arel_primary_key]
+            inner_rel = data_rel.to_arel
+            data_cols.each_with_index do |col, i|
+              inner_rel.project(col.as("g%03u" % i)).group(col)
             end
-            d_rel.where(cond) if cond
 
             # FIXME: This subtable won't be necessary for all aggregation funcs.
             # When we can avoid it, we should, for performance.
-            a_rel = Arel::SelectManager.new(
+            rel = Arel::SelectManager.new(
               Arel::Table.engine,
-              Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
+              Arel.sql("(#{inner_rel.to_sql}) as mochigome_data")
             )
             d_tbl = Arel::Table.new("mochigome_data")
             agg_fields.each_with_index do |a, i|
               name = "d%03u" % i
-              a_rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
+              rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
             end
             key_cols.take(n).each_with_index do |col, i|
               name = "g%03u" % i
-              a_rel.project(d_tbl[name].as(name)).group(name)
+              rel.project(d_tbl[name].as(name)).group(name)
             end
-            a_rel
+            rel
           }
         }
       end
     end
 
     def run(cond = nil)
+      root = create_node_tree(cond)
+      load_aggregate_data(root, cond)
+      return root
+    end
+
+    private
+
+    def create_node_tree(cond)
       root = DataNode.new(:report, @name)
-
-      if cond.is_a?(ActiveRecord::Base)
-        cond = [cond]
-      end
-      if cond.is_a?(Array)
-        return root if cond.empty?
-        cond = cond.inject(nil) do |expr, obj|
-          subexpr = obj.class.arel_primary_key.eq(obj.id)
-          expr ? expr.or(subexpr) : subexpr
-        end
-      end
-
-      r = @ids_rel.dup
-      r.apply_condition(cond) if cond
-      ids_table = @layer_types.first.connection.select_all(r.to_sql)
-
-      fill_layers(ids_table, {[] => root}, @layer_types)
-
-      @aggregate_rels.each do |focus_model, data_model_rels|
-        # TODO Actually get the key types found in init for this aggregation
-        super_types = @layer_types.take_while{|m| m != focus_model}
-        data_model_rels.each do |data_model, rel_funcs|
-          aggs = data_model.mochigome_aggregation_settings.options[:fields]
-          aggs_count = aggs.reject{|a| a[:in_ruby]}.size
-          rel_funcs.each do |rel_func|
-            q = rel_func.call(cond)
-            data_tree = {}
-            @layer_types.first.connection.select_all(q.to_sql).each do |row|
-              group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
-              data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
-              if group_values.empty?
-                data_tree = data_values
-              else
-                c = data_tree
-                group_values.take(group_values.size-1).each do |group_id|
-                  c = (c[group_id] ||= {})
-                end
-                c[group_values.last] = data_values
-              end
-            end
-            insert_aggregate_data_fields(root, data_tree, data_model)
-          end
-        end
-      end
-
       root.comment = <<-eos
         Mochigome Version: #{Mochigome::VERSION}
         Report Generated: #{Time.now}
@@ -128,30 +91,12 @@ module Mochigome
       root.comment.gsub!(/\n +/, "\n")
       root.comment.lstrip!
 
-      return root
-    end
+      r = @ids_rel.dup
+      r.apply_condition(cond) if cond
+      ids_table = @layer_types.first.connection.select_all(r.to_sql)
+      fill_layers(ids_table, {[] => root}, @layer_types)
 
-    private
-
-    def access_filtered_relation(r, models)
-      joined = Set.new
-      models.uniq.each do |model|
-        h = @access_filter.call(model)
-        h.delete(:join_paths).try :each do |path|
-          (0..(path.size-2)).each do |i|
-            next if models.include?(path[i+1]) or joined.include?(path[i+1])
-            r = ModelGraph.relation_func(path[i], path[i+1]).call(r)
-            joined.add path[i+1]
-          end
-        end
-        if h[:condition]
-          r = r.where(h.delete(:condition))
-        end
-        unless h.empty?
-          raise QueryError.new("Unknown assoc filter keys #{h.keys.inspect}")
-        end
-      end
-      r
+      root
     end
 
     def fill_layers(ids_table, parents, types, type_idx = 0)
@@ -190,6 +135,35 @@ module Mochigome
       end
 
       fill_layers(ids_table, layer, types, type_idx + 1)
+    end
+
+    def load_aggregate_data(node, cond)
+      @aggregate_rels.each do |focus_model, data_model_rels|
+        # TODO Actually get the key types found in init for this aggregation
+        super_types = @layer_types.take_while{|m| m != focus_model}
+        data_model_rels.each do |data_model, rel_funcs|
+          aggs = data_model.mochigome_aggregation_settings.options[:fields]
+          aggs_count = aggs.reject{|a| a[:in_ruby]}.size
+          rel_funcs.each do |rel_func|
+            q = rel_func.call(cond)
+            data_tree = {}
+            @layer_types.first.connection.select_all(q.to_sql).each do |row|
+              group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
+              data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
+              if group_values.empty?
+                data_tree = data_values
+              else
+                c = data_tree
+                group_values.take(group_values.size-1).each do |group_id|
+                  c = (c[group_id] ||= {})
+                end
+                c[group_values.last] = data_values
+              end
+            end
+            insert_aggregate_data_fields(node, data_tree, data_model)
+          end
+        end
+      end
     end
 
     def insert_aggregate_data_fields(node, table, data_model)
@@ -280,6 +254,17 @@ module Mochigome
     end
 
     def apply_condition(cond)
+      return unless cond
+      if cond.is_a?(ActiveRecord::Base)
+        cond = [cond]
+      end
+      if cond.is_a?(Array)
+        cond = cond.inject(nil) do |expr, obj|
+          subexpr = obj.class.arel_primary_key.eq(obj.id)
+          expr ? expr.or(subexpr) : subexpr
+        end
+      end
+
       ModelGraph.expr_models(cond).each{|m| join_to_model(m)}
       @rel = @rel.where(cond)
     end
