@@ -68,13 +68,11 @@ module Mochigome
               d_tbl = Arel::Table.new("mochigome_data")
               agg_fields.each_with_index do |a, i|
                 name = "d%03u" % i
-                outer_name = "o" + name
-                a_rel.project(a[:agg_proc].call(d_tbl[name]).as(outer_name))
+                a_rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
               end
               key_cols.take(n).each_with_index do |col, i|
                 name = "g%03u" % i
-                outer_name = "o" + name
-                a_rel.project(d_tbl[name].as(outer_name)).group(outer_name)
+                a_rel.project(d_tbl[name].as(name)).group(name)
               end
               a_rel
             }
@@ -113,8 +111,8 @@ module Mochigome
             q = rel_func.call(cond)
             data_tree = {}
             @layer_types.first.connection.select_all(q.to_sql).each do |row|
-              group_values = row.keys.select{|k| k.start_with?("og")}.sort.map{|k| row[k]}
-              data_values = row.keys.select{|k| k.start_with?("od")}.sort.map{|k| row[k]}
+              group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
+              data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
               if group_values.empty?
                 data_tree = data_values
               else
