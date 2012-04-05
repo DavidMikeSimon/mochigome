@@ -88,11 +88,10 @@ module Mochigome
         Layers: #{@layer_types.map(&:name).join(" => ")}
         AR Path: #{@layers_path.map(&:name).join(" => ")}
       eos
-      root.comment.gsub!(/\n +/, "\n")
-      root.comment.lstrip!
+      root.comment.gsub!(/(\n|^) +/, "\\1")
 
       r = @ids_rel.dup
-      r.apply_condition(cond) if cond
+      r.apply_condition(cond)
       ids_table = @layer_types.first.connection.select_all(r.to_sql)
       fill_layers(ids_table, {[] => root}, @layer_types)
 
