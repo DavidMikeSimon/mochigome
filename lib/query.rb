@@ -16,68 +16,59 @@ module Mochigome
       @ids_rel.apply_access_filter_func(@access_filter)
 
       # TODO: Validate that aggregate_sources is in the correct format
-      aggs_by_model = {}
+      @aggregate_rels = {}
       aggregate_sources.each do |a|
         if a.instance_of?(Array)
-          focus_cls, data_cls = a.first, a.second
+          focus_model, data_model = a.first, a.second
         else
-          focus_cls, data_cls = a, a
+          focus_model, data_model = a, a
         end
-        aggs_by_model[focus_cls] ||= []
-        aggs_by_model[focus_cls] << data_cls
-      end
 
-      @aggregate_rels = {}
-      aggs_by_model.each do |focus_model, data_models|
-        @aggregate_rels[focus_model] = {}
-        data_models.each do |data_model|
-          agg_rel = Relation.new(@layer_types) # TODO Only go to focus
-          agg_rel.join_to_model(focus_model)
+        agg_rel = Relation.new(@layer_types) # TODO Only go as far as focus
+        agg_rel.join_to_model(focus_model)
+        agg_rel.join_on_path_thru([focus_model, data_model])
+        agg_rel.apply_access_filter_func(@access_filter)
 
-          f2d_path = ModelGraph.path_thru([focus_model, data_model]).uniq
-          agg_rel.join_on_path(f2d_path)
-          agg_rel.apply_access_filter_func(@access_filter)
+        focus_idx = @layers_path.index(focus_model)
+        key_path = focus_idx ? @layers_path.take(focus_idx+1) : @layers_path
+        key_path = key_path.select{|m| @layer_types.include?(m)}
+        key_cols = key_path.map{|m| m.arel_primary_key}
 
-          focus_idx = @layers_path.index(focus_model)
-          key_path = focus_idx ? @layers_path.take(focus_idx+1) : @layers_path
-          key_path = key_path.select{|m| @layer_types.include?(m)}
-          key_cols = key_path.map{|m| m.arel_primary_key}
+        agg_fields = data_model.mochigome_aggregation_settings.
+          options[:fields].reject{|a| a[:in_ruby]}
+        agg_fields.each_with_index do |a, i|
+          d_expr = a[:value_proc].call(data_model.arel_table)
+          agg_rel.select_expr(d_expr.as("d%03u" % i))
+        end
 
-          agg_fields = data_model.mochigome_aggregation_settings.
-            options[:fields].reject{|a| a[:in_ruby]}
-          agg_fields.each_with_index do |a, i|
-            d_expr = a[:value_proc].call(data_model.arel_table)
-            agg_rel.select_expr(d_expr.as("d%03u" % i))
-          end
+        @aggregate_rels[focus_model] ||= {}
+        @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
+          lambda {|cond|
+            d_rel = agg_rel.to_arel
+            d_cols = key_cols.take(n) + [data_model.arel_primary_key]
+            d_cols.each_with_index do |col, i|
+              d_rel.project(col.as("g%03u" % i)).group(col)
+            end
+            d_rel.where(cond) if cond
 
-          @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
-            lambda {|cond|
-              d_rel = agg_rel.to_arel
-              d_cols = key_cols.take(n) + [data_model.arel_primary_key]
-              d_cols.each_with_index do |col, i|
-                d_rel.project(col.as("g%03u" % i)).group(col)
-              end
-              d_rel.where(cond) if cond
-
-              # FIXME: This subtable won't be necessary for all aggregation funcs.
-              # When we can avoid it, we should, for performance.
-              a_rel = Arel::SelectManager.new(
-                Arel::Table.engine,
-                Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
-              )
-              d_tbl = Arel::Table.new("mochigome_data")
-              agg_fields.each_with_index do |a, i|
-                name = "d%03u" % i
-                a_rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
-              end
-              key_cols.take(n).each_with_index do |col, i|
-                name = "g%03u" % i
-                a_rel.project(d_tbl[name].as(name)).group(name)
-              end
-              a_rel
-            }
+            # FIXME: This subtable won't be necessary for all aggregation funcs.
+            # When we can avoid it, we should, for performance.
+            a_rel = Arel::SelectManager.new(
+              Arel::Table.engine,
+              Arel.sql("(#{d_rel.to_sql}) as mochigome_data")
+            )
+            d_tbl = Arel::Table.new("mochigome_data")
+            agg_fields.each_with_index do |a, i|
+              name = "d%03u" % i
+              a_rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
+            end
+            key_cols.take(n).each_with_index do |col, i|
+              name = "g%03u" % i
+              a_rel.project(d_tbl[name].as(name)).group(name)
+            end
+            a_rel
           }
-        end
+        }
       end
     end
 
@@ -266,6 +257,10 @@ module Mochigome
 
       raise QueryError.new("No path to #{model}") unless best_path
       join_on_path(best_path)
+    end
+
+    def join_on_path_thru(path)
+      join_on_path(ModelGraph.path_thru(path).uniq)
     end
 
     def join_on_path(path)
