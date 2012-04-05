@@ -29,78 +29,33 @@ module Mochigome
 
       @aggregate_rels = {}
       aggs_by_model.each do |focus_model, data_models|
-        # Need to do a relation over the entire path in case query has
-        # a condition on something other than the focus model layer.
-        # TODO: Would be better to only do this if necesssitated by the
-        # conditions supplied to the query when it is ran, and/or
-        # the access filter.
-        focus_rel = ModelGraph.relation_over_path(@layers_path)
-
         @aggregate_rels[focus_model] = {}
         data_models.each do |data_model|
-          if focus_model == data_model
-            f2d_path = [focus_model]
-          else
-            #TODO: Handle nil here
-            f2d_path = ModelGraph.path_thru([focus_model, data_model])
-          end
-          agg_path = nil
-          key_path = nil
-          f2d_path.each do |link_model|
-            remainder = f2d_path.drop_while{|m| m != link_model}
-            next if (remainder.drop(1) & @layers_path).size > 0
-            if @layers_path.include?(link_model)
-              agg_path = remainder
-              key_path = @layers_path.take(@layers_path.index(focus_model)+1)
-              break
-            else
-              # Route it from the closest layer model
-              @layers_path.reverse.each do |layer|
-                p = ModelGraph.path_thru([layer, link_model]) + remainder.drop(1) # TODO: Handle path_thru returning nil
-                next if (p.drop(1) & @layers_path).size > 0
-                next if p.uniq.size != p.size
-                if agg_path.nil? || p.size < agg_path.size
-                  agg_path = p
-                  key_path = @layers_path
-                end
-              end
-            end
-          end
+          agg_rel = Relation.new(@layer_types) # TODO Only go to focus
+          agg_rel.join_to_model(focus_model)
 
-          key_cols = key_path.map{|m| m.arel_primary_key }
+          f2d_path = ModelGraph.path_thru([focus_model, data_model]).uniq
+          agg_rel.join_on_path(f2d_path)
+          agg_rel.apply_access_filter_func(@access_filter)
 
-          agg_data_rel = ModelGraph.relation_over_path(agg_path, focus_rel.dup)
-          agg_data_rel = access_filtered_relation(agg_data_rel, @layers_path + agg_path)
-          agg_fields = data_model.mochigome_aggregation_settings.options[:fields].reject{|a| a[:in_ruby]}
-          agg_joined_models = @layers_path + agg_path
+          focus_idx = @layers_path.index(focus_model)
+          key_path = focus_idx ? @layers_path.take(focus_idx+1) : @layers_path
+          key_path = key_path.select{|m| @layer_types.include?(m)}
+          key_cols = key_path.map{|m| m.arel_primary_key}
+
+          agg_fields = data_model.mochigome_aggregation_settings.
+            options[:fields].reject{|a| a[:in_ruby]}
           agg_fields.each_with_index do |a, i|
-            (a[:joins] || []).each do |m|
-              unless agg_joined_models.include?(m)
-                cand = nil
-                agg_joined_models.each do |agg_join_src_m|
-                  p = ModelGraph.path_thru([agg_join_src_m, m])
-                  if p && (cand.nil? || p.size < cand.size)
-                    cand = p
-                  end
-                end
-                if cand
-                  agg_data_rel = ModelGraph.relation_over_path(cand, agg_data_rel)
-                  agg_joined_models += cand
-                else
-                  raise QueryError.new("Can't join from query to agg join model #{m.name}") # TODO: Test this
-                end
-              end
-            end
             d_expr = a[:value_proc].call(data_model.arel_table)
-            agg_data_rel.project(d_expr.as("d#{i}"))
+            agg_rel.select_expr(d_expr.as("d%03u" % i))
           end
 
           @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
             lambda {|cond|
-              d_rel = agg_data_rel.dup
+              d_rel = agg_rel.to_arel
               d_cols = key_cols.take(n) + [data_model.arel_primary_key]
               d_cols.each_with_index do |col, i|
-                d_rel.project(col.as("g#{i}")).group(col)
+                d_rel.project(col.as("g%03u" % i)).group(col)
               end
               d_rel.where(cond) if cond
 
@@ -112,17 +67,19 @@ module Mochigome
               )
               d_tbl = Arel::Table.new("mochigome_data")
               agg_fields.each_with_index do |a, i|
-                a_rel.project(a[:agg_proc].call(d_tbl["d#{i}"]))
+                name = "d%03u" % i
+                outer_name = "o" + name
+                a_rel.project(a[:agg_proc].call(d_tbl[name]).as(outer_name))
               end
               key_cols.take(n).each_with_index do |col, i|
-                outer_name = "og#{i}"
-                a_rel.project(d_tbl["g#{i}"].as(outer_name)).group(outer_name)
+                name = "g%03u" % i
+                outer_name = "o" + name
+                a_rel.project(d_tbl[name].as(outer_name)).group(outer_name)
               end
               a_rel
             }
           }
         end
-
       end
     end
 
@@ -139,12 +96,6 @@ module Mochigome
           expr ? expr.or(subexpr) : subexpr
         end
       end
-      if cond
-        ModelGraph.expr_tables(cond).each do |t|
-          raise QueryError.new("Condition table #{t} not in layer list") unless
-            @layers_path.any?{|m| m.real_model? && m.table_name == t}
-        end
-      end
 
       r = @ids_rel.dup
       r.apply_condition(cond) if cond
@@ -153,27 +104,25 @@ module Mochigome
       fill_layers(ids_table, {[] => root}, @layer_types)
 
       @aggregate_rels.each do |focus_model, data_model_rels|
+        # TODO Actually get the key types found in init for this aggregation
         super_types = @layer_types.take_while{|m| m != focus_model}
-        super_cols = super_types.map{|m| @layers_path.find_index(m)}
         data_model_rels.each do |data_model, rel_funcs|
           aggs = data_model.mochigome_aggregation_settings.options[:fields]
           aggs_count = aggs.reject{|a| a[:in_ruby]}.size
           rel_funcs.each do |rel_func|
             q = rel_func.call(cond)
             data_tree = {}
-            # Each row has aggs_count data fields, followed by the id fields
-            # from least specific to most.
-            @layer_types.first.connection.select_rows(q.to_sql).each do |row|
-              if row.size == aggs_count
-                data_tree = row.take(aggs_count)
+            @layer_types.first.connection.select_all(q.to_sql).each do |row|
+              group_values = row.keys.select{|k| k.start_with?("og")}.sort.map{|k| row[k]}
+              data_values = row.keys.select{|k| k.start_with?("od")}.sort.map{|k| row[k]}
+              if group_values.empty?
+                data_tree = data_values
               else
                 c = data_tree
-                super_cols.each_with_index do |sc_num, sc_idx|
-                  break if aggs_count+sc_idx >= row.size-1
-                  col_num = aggs_count + sc_num
-                  c = (c[row[col_num]] ||= {})
+                group_values.take(group_values.size-1).each do |group_id|
+                  c = (c[group_id] ||= {})
                 end
-                c[row.last] = row.take(aggs_count)
+                c[group_values.last] = data_values
               end
             end
             insert_aggregate_data_fields(root, data_tree, data_model)
@@ -290,7 +239,7 @@ module Mochigome
     end
 
     def to_arel
-      @rel.project # FIXME Should I use Arel's dup function instead?
+      @rel.clone
     end
 
     def to_sql
@@ -332,8 +281,13 @@ module Mochigome
       @rel = @rel.project(m.arel_primary_key.as("#{m.name}_id"))
     end
 
+    def select_expr(e)
+      ModelGraph.expr_models(e).each{|m| join_to_model(m)}
+      @rel = @rel.project(e)
+    end
+
     def apply_condition(cond)
-      # TODO: Join if necessary
+      ModelGraph.expr_models(cond).each{|m| join_to_model(m)}
       @rel = @rel.where(cond)
     end
 

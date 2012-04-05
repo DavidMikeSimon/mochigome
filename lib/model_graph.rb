@@ -2,25 +2,28 @@ require 'rgl/adjacency'
 require 'rgl/traversal'
 
 module Mochigome
+  private
+
   module ModelGraph
-    private
-
-    # Take an expression and return a Set of all tables it references
-    def self.expr_tables(e)
-      # TODO: This is kind of hacky, Arel probably has a better way
-      # to do this with its API.
-      r = Set.new
-      [:expr, :left, :right].each do |m|
-        r += expr_tables(e.send(m)) if e.respond_to?(m)
-      end
-      r.add e.relation.name if e.respond_to?(:relation)
-      r
-    end
-
     @@graphed_models = Set.new
+    @@table_to_model = {}
     @@assoc_graph = RGL::DirectedAdjacencyGraph.new
     @@edge_relation_funcs = {}
     @@shortest_paths = {}
+
+    # Take an expression and return a Set of all models it references
+    def self.expr_models(e)
+      r = Set.new
+      [:expr, :left, :right].each do |m|
+        r += expr_models(e.send(m)) if e.respond_to?(m)
+      end
+      if e.respond_to?(:relation)
+        model = @@table_to_model[e.relation.name]
+        raise ModelSetupError.new("Table->model lookup error") unless model
+        r.add model
+      end
+      r
+    end
 
     def self.relation_over_path(path, rel = nil)
       real_path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
@@ -44,6 +47,7 @@ module Mochigome
       until model_queue.empty?
         src = path.last
         tgt = model_queue.shift
+        next if src == tgt
         real_src = src.real_model? ? src : src.model
         real_tgt = tgt.real_model? ? tgt : tgt.model
         unless real_src == real_tgt
@@ -73,6 +77,11 @@ module Mochigome
         next if @@graphed_models.include? model
         @@graphed_models.add model
         added_models << model
+
+        if @@table_to_model.has_key?(model.table_name)
+          raise ModelError.new("Table #{model.table_name} used twice")
+        end
+        @@table_to_model[model.table_name] = model
 
         model.reflections.
         reject{|name, assoc| assoc.through_reflection}.
@@ -119,6 +128,5 @@ module Mochigome
         end
       end
     end
-
   end
 end

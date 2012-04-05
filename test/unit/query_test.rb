@@ -88,8 +88,7 @@ describe Mochigome::Query do
 
   it "can build a one-layer DataNode when given an arbitrary Arel condition" do
     q = Mochigome::Query.new([Product])
-    tbl = Arel::Table.new(Product.table_name)
-    data_node = q.run(tbl[:name].eq(@product_a.name))
+    data_node = q.run(Product.arel_table[:name].eq(@product_a.name))
     assert_equal_children [@product_a], data_node
     assert_no_children data_node/0
   end
@@ -447,18 +446,11 @@ describe Mochigome::Query do
     end
   end
 
-  it "will not allow a query on targets not in the layer list" do
-    q = Mochigome::Query.new([Product])
-    assert_raises Mochigome::QueryError do
-      q.run(@category1)
-    end
-  end
-
   it "can use a provided access filter function to limit query results" do
     af = proc do |cls|
       return {} unless cls == Product
       return {
-        :condition => Arel::Table.new(Product.table_name)[:category_id].gt(0)
+        :condition => Product.arel_table[:category_id].gt(0)
       }
     end
     q = Mochigome::Query.new([Product], :access_filter => af)
@@ -472,7 +464,7 @@ describe Mochigome::Query do
       return {} unless cls == Product
       return {
         :join_paths => [[Product, StoreProduct, Store]],
-        :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
+        :condition => Store.arel_table[:name].matches("Jo%")
       }
     end
     q = Mochigome::Query.new([Product], :access_filter => af)
@@ -486,18 +478,17 @@ describe Mochigome::Query do
       return {} unless cls == Product
       return {
         :join_paths => [[Product, StoreProduct, Store]],
-        :condition => Arel::Table.new(Store.table_name)[:name].matches("Jo%")
+        :condition => Store.arel_table[:name].matches("Jo%")
       }
     end
     q = Mochigome::Query.new([Product, Store], :access_filter => af)
     assert_equal 1, q.instance_variable_get(:@ids_rel).to_sql.scan(/join .stores./i).size
   end
 
-  it "complains if run given a condition on an unused table" do
+  it "automatically joins if run given a condition on a new table" do
     q = Mochigome::Query.new([Product, Store])
-    assert_raises Mochigome::QueryError do
-      q.run(Arel::Table.new(Category.table_name)[:id].eq(41))
-    end
+    dn = q.run(Category.arel_table[:name].eq(@category1.name))
+    assert_equal 2, dn.children.size
   end
 
   # TODO: Test that access filter join paths are followed, rather than closest path
