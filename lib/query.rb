@@ -88,8 +88,7 @@ module Mochigome
         Layers: #{@layer_types.map(&:name).join(" => ")}
         AR Path: #{@layers_path.map(&:name).join(" => ")}
       eos
-      root.comment.gsub!(/\n +/, "\n")
-      root.comment.lstrip!
+      root.comment.gsub!(/(\n|^) +/, "\\1")
 
       r = @ids_rel.dup
       r.apply_condition(cond) if cond
