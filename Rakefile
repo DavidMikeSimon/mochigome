@@ -58,8 +58,8 @@ gemspec = Gem::Specification.new do |s|
   s.authors      = ["David Mike Simon"]
   s.email        = "david.mike.simon@gmail.com"
   s.homepage     = "http://github.com/DavidMikeSimon/mochigome"
-  s.summary      = "User-customizable report generator"
-  s.description  = "Report generator that uses your ActiveRecord associations"
+  s.summary      = "The do-what-I-mean report generator"
+  s.description  = "Report generator that graphs over ActiveRecord associations"
   s.files        = `git ls-files .`.split("\n") - [".gitignore"]
   s.platform     = Gem::Platform::RUBY
   s.require_path = 'lib'
@@ -69,6 +69,7 @@ gemspec = Gem::Specification.new do |s|
   s.add_dependency('ruport')
   s.add_dependency('nokogiri')
   s.add_dependency('rgl')
+  s.add_dependency('activerecord')
 end
 
 Gem::PackageTask.new(gemspec) do |pkg|
