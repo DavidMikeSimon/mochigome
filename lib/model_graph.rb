@@ -79,9 +79,29 @@ module Mochigome
         added_models << model
 
         if @@table_to_model.has_key?(model.table_name)
-          raise ModelSetupError.new("Table #{model.table_name} used twice")
+          # TODO Test this!
+          # Find the nearest common ancestor that derives from AR::Base
+          common = nil
+          [model, @@table_to_model[model.table_name]].each do |tgt|
+            a = tgt.ancestors
+            a = a.select{|c| c.ancestors.include?(ActiveRecord::Base)}
+            if common.nil?
+              common = a
+            else
+              common = common & a
+            end
+          end
+
+          if common.empty? || common.first == ActiveRecord::Base
+            raise ModelSetupError.new(
+              "Unrelated models %s and %s both claim to use table %s" %
+              [model, @@table_to_model[model.table_name], model.table_name]
+            )
+          end
+          @@table_to_model[model.table_name] = common.first
+        else
+          @@table_to_model[model.table_name] = model
         end
-        @@table_to_model[model.table_name] = model
 
         model.reflections.
         reject{|name, assoc| assoc.through_reflection}.
