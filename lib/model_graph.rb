@@ -79,7 +79,7 @@ module Mochigome
         added_models << model
 
         if @@table_to_model.has_key?(model.table_name)
-          raise ModelError.new("Table #{model.table_name} used twice")
+          raise ModelSetupError.new("Table #{model.table_name} used twice")
         end
         @@table_to_model[model.table_name] = model
 
