@@ -3,7 +3,6 @@ module Mochigome
     def initialize(layer_types, options = {})
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
-      @layers_path = ModelGraph.path_thru(@layer_types)
 
       @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
@@ -28,10 +27,8 @@ module Mochigome
         agg_rel.join_on_path_thru([focus_model, data_model])
         agg_rel.apply_access_filter_func(@access_filter)
 
-        focus_idx = @layers_path.index(focus_model)
-        key_path = focus_idx ? @layers_path.take(focus_idx+1) : @layers_path
-        key_path = key_path.select{|m| @layer_types.include?(m)}
-        key_cols = key_path.map{|m| m.arel_primary_key}
+        key_models = @ids_rel.spine_layers_thru(focus_model)
+        key_cols = key_models.map{|m| m.arel_primary_key}
 
         agg_fields = data_model.mochigome_aggregation_settings.
           options[:fields].reject{|a| a[:in_ruby]}
@@ -86,7 +83,7 @@ module Mochigome
         Mochigome Version: #{Mochigome::VERSION}
         Report Generated: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
-        AR Path: #{@layers_path.map(&:name).join(" => ")}
+        AR Path: #{@ids_rel.full_spine_path.map(&:name).join(" => ")}
       eos
       root.comment.gsub!(/(\n|^) +/, "\\1")
 
@@ -191,11 +188,12 @@ module Mochigome
 
   class Relation
     def initialize(layers)
+      @model_graph = ModelGraph.new
       @spine_layers = layers
-      @spine = ModelGraph.path_thru(layers) or
+      @spine = @model_graph.path_thru(layers) or
         raise QueryError.new("No valid path thru #{layers.inspect}") #TODO Test
       @models = Set.new @spine
-      @rel = ModelGraph.relation_over_path(@spine)
+      @rel = @model_graph.relation_over_path(@spine)
 
       @spine_layers.each{|m| select_model_id(m)}
     end
@@ -206,6 +204,16 @@ module Mochigome
 
     def to_sql
       @rel.to_sql
+    end
+
+    def full_spine_path
+      @spine.dup
+    end
+
+    def spine_layers_thru(model)
+      r = @spine.take_while{|m| m != model}
+      r << model unless r.size == @spine.size
+      r.select{|m| @spine_layers.include? m}
     end
 
     def clone
@@ -222,7 +230,7 @@ module Mochigome
       # Route to it in as few steps as possible, closer to spine end if tie.
       best_path = nil
       (@spine.reverse + (@models.to_a - @spine)).each do |link_model|
-        path = ModelGraph.path_thru([link_model, model])
+        path = @model_graph.path_thru([link_model, model])
         if path && (best_path.nil? || path.size < best_path.size)
           best_path = path
         end
@@ -233,7 +241,7 @@ module Mochigome
     end
 
     def join_on_path_thru(path)
-      join_on_path(ModelGraph.path_thru(path).uniq)
+      join_on_path(@model_graph.path_thru(path).uniq)
     end
 
     def join_on_path(path)
@@ -248,7 +256,7 @@ module Mochigome
     end
 
     def select_expr(e)
-      ModelGraph.expr_models(e).each{|m| join_to_model(m)}
+      @model_graph.expr_models(e).each{|m| join_to_model(m)}
       @rel = @rel.project(e)
     end
 
@@ -264,7 +272,7 @@ module Mochigome
         end
       end
 
-      ModelGraph.expr_models(cond).each{|m| join_to_model(m)}
+      @model_graph.expr_models(cond).each{|m| join_to_model(m)}
       @rel = @rel.where(cond)
     end
 
@@ -289,7 +297,7 @@ module Mochigome
       raise QueryError.new("Can't join from #{src}, not available") unless
         @models.include?(src)
       return if @models.include?(tgt) # TODO Maybe still apply join conditions?
-      @rel = ModelGraph.relation_func(src, tgt).call(@rel)
+      @rel = @model_graph.relation_func(src, tgt).call(@rel)
       @models.add tgt
     end
   end
