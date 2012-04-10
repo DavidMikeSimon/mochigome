@@ -1,3 +1,5 @@
+# TODO: Write some unit tests for this module
+
 require 'rgl/adjacency'
 require 'rgl/traversal'
 
