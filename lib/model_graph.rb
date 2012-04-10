@@ -92,6 +92,7 @@ module Mochigome
             end
           end
 
+          next if common.first == @@table_to_model[model.table_name]
           if common.empty? || common.first == ActiveRecord::Base
             raise ModelSetupError.new(
               "Unrelated models %s and %s both claim to use table %s" %
