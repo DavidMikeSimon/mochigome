@@ -16,6 +16,10 @@ module Mochigome
         true
       end
 
+      def to_real_model
+        self
+      end
+
       # TODO: Use this instead of calling Table.new all over the place
       def arel_table
         Arel::Table.new(table_name)

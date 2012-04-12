@@ -25,6 +25,10 @@ module Mochigome
       false
     end
 
+    def to_real_model
+      @model
+    end
+
     def arel_table
       @model.arel_table
     end

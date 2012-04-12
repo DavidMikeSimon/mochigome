@@ -30,7 +30,7 @@ module Mochigome
     end
 
     def relation_over_path(path, rel = nil)
-      real_path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
+      real_path = path.map(&:to_real_model).uniq
       # Project ensures that we return a Rel, not a Table, even if path is empty
       rel ||= real_path.first.arel_table.project
       (0..(real_path.size-2)).each do |i|
@@ -52,8 +52,8 @@ module Mochigome
         src = path.last
         tgt = model_queue.shift
         next if src == tgt
-        real_src = src.real_model? ? src : src.model
-        real_tgt = tgt.real_model? ? tgt : tgt.model
+        real_src = src.to_real_model
+        real_tgt = tgt.to_real_model
         unless real_src == real_tgt
           seg = @shortest_paths[[real_src,real_tgt]]
           unless seg

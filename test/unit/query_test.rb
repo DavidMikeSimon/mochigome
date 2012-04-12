@@ -172,12 +172,12 @@ describe Mochigome::Query do
 
   it "can subgroup layers by attributes without including layer model" do
     q = Mochigome::Query.new(
-      [Mochigome::SubgroupModel.new(Owner, :last_name), Store, Product]
+      [Mochigome::SubgroupModel.new(Owner, :last_name)],
+      :aggregate_sources => [Sale]
     )
     data_node = q.run
     assert_equal "Smith", (data_node/1).name
-    assert_equal "John's Store", (data_node/1/0).name
-    assert_equal "Product A", (data_node/1/0/0).name
+    assert_equal 8, (data_node/1)['Sales count']
   end
 
   # TODO: Test diamond patterns

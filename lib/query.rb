@@ -192,7 +192,7 @@ module Mochigome
       @spine_layers = layers
       @spine = @model_graph.path_thru(layers) or
         raise QueryError.new("No valid path thru #{layers.inspect}") #TODO Test
-      @models = Set.new @spine
+      @models = Set.new @spine.map(&:to_real_model)
       @rel = @model_graph.relation_over_path(@spine)
 
       @spine_layers.each{|m| select_model_id(m)}
@@ -245,7 +245,7 @@ module Mochigome
     end
 
     def join_on_path(path)
-      path = path.map{|e| (e.real_model? ? e : e.model)}.uniq
+      path = path.map(&:to_real_model).uniq
       (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
         add_join_link src, tgt
       end
