@@ -29,10 +29,10 @@ module Mochigome
       r
     end
 
-    def relation_over_path(path, rel = nil)
+    def relation_over_path(path)
       real_path = path.map(&:to_real_model).uniq
       # Project ensures that we return a Rel, not a Table, even if path is empty
-      rel ||= real_path.first.arel_table.project
+      rel = real_path.first.arel_table.project
       (0..(real_path.size-2)).each do |i|
         rel = relation_func(real_path[i], real_path[i+1]).call(rel)
       end

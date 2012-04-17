@@ -16,9 +16,9 @@ describe Mochigome::DataNode do
     assert_equal "bar", datanode.name
   end
 
-  it "can be duplicated deeply" do
+  it "can be cloned deeply" do
     datanode = Mochigome::DataNode.new(:foo, :bar)
-    twin = datanode.dup
+    twin = datanode.clone
     datanode << Mochigome::DataNode.new(:xyzzy, :froboz)
     assert_empty twin.children
     datanode.name = "Mike"

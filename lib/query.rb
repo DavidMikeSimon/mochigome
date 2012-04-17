@@ -87,7 +87,7 @@ module Mochigome
       eos
       root.comment.gsub!(/(\n|^) +/, "\\1")
 
-      r = @ids_rel.dup
+      r = @ids_rel.clone
       r.apply_condition(cond)
       ids_table = @layer_types.first.connection.select_all(r.to_sql)
       fill_layers(ids_table, {[] => root}, @layer_types)
@@ -124,9 +124,9 @@ module Mochigome
         dn[:internal_type] = model.name
 
         cur_to_parent.fetch(obj.id).each do |parent_ids_seq|
-          duped = dn.dup
-          parents.fetch(parent_ids_seq) << duped
-          layer[parent_ids_seq + [obj.id]] = duped
+          cloned = dn.clone
+          parents.fetch(parent_ids_seq) << cloned
+          layer[parent_ids_seq + [obj.id]] = cloned
         end
       end
 
@@ -218,9 +218,8 @@ module Mochigome
 
     def clone
       c = super
-      c.instance_variable_set :@spine, @spine.dup
-      c.instance_variable_set :@models, @models.dup
-      c.instance_variable_set :@rel, @rel.project
+      c.instance_variable_set :@models, @models.clone
+      c.instance_variable_set :@rel, @rel.clone
       c
     end
 

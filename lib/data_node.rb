@@ -41,9 +41,9 @@ module Mochigome
       @children[idx]
     end
 
-    def dup
+    def clone
       twin = super
-      twin.instance_variable_set(:@children, @children.map{|c| c.dup})
+      twin.instance_variable_set(:@children, @children.map{|c| c.clone})
       twin
     end
 

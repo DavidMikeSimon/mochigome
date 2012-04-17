@@ -386,6 +386,17 @@ describe Mochigome::Query do
       data_node['Products sum price']
   end
 
+  it "allows grouping and aggregation on same class with another condition" do
+    # This query is a pointless use of aggregates, but it still shouldn't
+    # crash, which it has when similar queries were ran in JSAS.
+    q = Mochigome::Query.new(
+      [Product],
+      :aggregate_sources => [Product]
+    )
+    data_node = q.run([@store_x])
+    assert_equal 1, data_node["Expensive products"]
+  end
+
   it "does not include hidden aggregation fields in output" do
     q = Mochigome::Query.new(
       [Owner, Store],
