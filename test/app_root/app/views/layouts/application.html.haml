@@ -1,0 +1,15 @@
+!!!
+%html{ "xml:lang" => "en", :lang => "en", :xmlns => "http://www.w3.org/1999/xhtml"}
+  %head
+    %meta{ :content => "text/html; charset=UTF-8", "http-equiv" => "Content-Type" }
+    %title
+      Mochigome Demo
+    = stylesheet_link_tag 'common.css'
+    = javascript_include_tag 'prototype.js', 'report_edit.js', :cache => true
+  %body
+    #flashbox
+      - [:alert, :warning, :notice].each do |key|
+        - next unless flash[key]
+        .flash{ :class => "flash_#{key}" }
+          = flash[key]
+    = yield

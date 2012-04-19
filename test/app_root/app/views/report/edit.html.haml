@@ -1,0 +1,56 @@
+- @possible_layer_models.each do |label, clsname|
+  :javascript
+    add_possible_layer("#{label}", "#{clsname}");
+
+- ReportController::AGGREGATE_SOURCES.each do |label, name|
+  :javascript
+    add_possible_aggregate_source("#{label}", "#{name}");
+
+- form_tag report_path, :method => :get, :id => 'report-edit-form' do
+  %div
+    %h5 Grouping
+    %ul#layer-list
+    :javascript
+      var layer_list =
+      new ReportSettingList('layer-list', 'l', function(rsl) {
+        var chosen = rsl.values_to_here();
+        return report_settings_possible_layers.reject(function(e) {
+          return chosen.any(function(c) {
+            return c == e[1];
+          })
+        })
+      }, {"label_f" : function(rsl) {
+        if (rsl.num_prev() == 0) {
+          return "Group first by"
+        } else {
+          return "Then by"
+        }
+      }, "limit": 4});
+    - @layer_names.each do |clsname|
+      :javascript
+        layer_list.preload_value("#{clsname}");
+  %div
+    %h5 Data
+    %ul#agg-list
+    :javascript
+      var agg_list = new ReportSettingList('agg-list', 'a', function(rsl) {
+        var chosen = rsl.values_to_here();
+        return report_settings_possible_aggregate_sources.reject(function(e) {
+          return chosen.any(function(c) {
+            return c == e[1];
+          })
+        })
+      }, {"limit": 2});
+    - @aggregate_source_names.each do |srcname|
+      :javascript
+        agg_list.preload_value("#{srcname}")
+  - unless @condition_params.empty?
+    %div
+      %h5 Filtering By
+      %ul#cond-list
+        - @condition_params.each_with_index do |c, i|
+          %ul= condition_desc(c)
+          - c.each do |k,v|
+            = hidden_field_tag "c[f#{i}][#{k}]", v
+
+  = submit_tag("Run Report")

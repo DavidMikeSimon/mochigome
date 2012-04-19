@@ -1,0 +1,157 @@
+body {
+  font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+  color: #657b83;
+  background: #fdf6e3;
+}
+
+.flash {
+  border: solid 1px black;
+  padding: 0.5em;
+  margin-bottom: 1em;
+  min-height: 32px;
+}
+
+.flash_notice {
+  border-color: #99cc99;
+  color: #006600;
+  background: #eeffee;
+}
+
+.flash_warning {
+  border-color: #cc9999;
+  color: white;
+  background: #cc6622;
+}
+
+.flash_alert {
+  border-color: #cc9999;
+  color: white;
+  background: #cc0000;
+}
+
+#report-edit-form div {
+  padding-left: 3px;
+}
+
+#report-edit-form div ul {
+  list-style-type: none;
+}
+
+#report-edit-form div {
+  background-color: #eee8d5;
+  margin: 10px 0;
+  border: 1px solid gray;
+}
+
+.report table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  margin-left: 0px;
+  margin-bottom: 2px;
+}
+
+.report table thead tr {
+  background-color: #eee8d5;
+  color: #586e75;
+}
+
+.report table td, .report table th {
+  padding-bottom: 0.35em;
+  border: 1px solid gray;
+}
+
+.report .report-header {
+  background-color: #eee8d5;
+  padding: 4px;
+  margin: 4px 0;
+  border: 1px solid gray;
+}
+
+.report table col.item-name {
+  width: 200px;
+}
+
+.report table tr td.item-name {
+  font-weight: bold;
+}
+
+.report table tr th {
+  font-style: italic;
+}
+
+.report table tr th.item-name {
+  font-weight: bold;
+}
+
+.report table tr.subtable-name-row {
+  color: #eee8d5;
+  background-color: #777777;
+}
+
+.report table tr.subtable-name-row th {
+  font-weight: bold;
+}
+
+.report .node {
+  padding: 4px;
+  border-left: solid 1px gray;
+  margin-bottom: 8px;
+}
+
+.report .node .node {
+  margin-left: 18px;
+}
+
+.report .node.subtable-node {
+  border: solid 1px gray;
+  margin-bottom: 15px;
+  background-color: #eeeeff;
+}
+
+.report .datum label {
+  font-style: italic;
+}
+
+.report .datum label:after {
+  content: ": ";
+}
+
+.report .datum span.value {
+  font-weight: bold;
+}
+
+h1 {
+  font-size: 240%;
+}
+
+h2 {
+  font-size: 200%;
+}
+
+h3 {
+  font-size: 170%;
+}
+
+h4 {
+  font-size: 150%;
+}
+
+h5 {
+  font-size: 135%;
+}
+
+h6 {
+  font-size: 120%;
+}
+
+.report h1, .report h2, .report h3, .report h4, .report h5, .report h6 {
+  margin-top: 0.1em;
+  margin-bottom: 0.2em;
+}
+
+.report img.chart {
+  margin: 0.4em 0;
+  padding: 0.4em;
+  background-color: #eee8d5;
+}

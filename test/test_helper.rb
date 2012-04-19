@@ -1,4 +1,4 @@
-ENV['RAILS_ENV'] = 'test'
+ENV['RAILS_ENV'] = ENV['NO_MINITEST'] ? "development" : "test"
 
 begin
   # Used when running test files directly
