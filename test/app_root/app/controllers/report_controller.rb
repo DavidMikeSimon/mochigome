@@ -179,7 +179,7 @@ class ReportController < ApplicationController
       chart_options[:bar_width_and_spacing] = [8,2,x_gap]
 
       min_val = [0, chart_options[:data].flatten.min].min
-      max_val = [100, chart_options[:data].flatten.max].max
+      max_val = [100, chart_options[:data].flatten.max].max # FIXME No no no
       chart_options[:axis_range] = [nil, [min_val, max_val]]
       chart_options[:min_value] = chart_options[:axis_range][1][0]
       chart_options[:max_value] = chart_options[:axis_range][1][1]
@@ -189,7 +189,7 @@ class ReportController < ApplicationController
         chart_options[:orientation] = 'horizontal'
         chart_options[:class] += ' horizontal'
         chart_options[:axis_with_labels] = 'y,x'
-        chart_options[:size] = "350x#{chart_options[:axis_labels][0].size*65}"
+        chart_options[:size] = "350x#{50 + chart_options[:axis_labels][0].size*30}"
         chart_options[:bar_width_and_spacing][2] = 10
       end
 
