@@ -300,6 +300,76 @@ class ReportController < ApplicationController
     end
   end
 
+  # FIXME: Factor the send_X methods below
+
+  def send_pdf(fo_data, filename, download, pdf_options = {})
+    pdf = ApacheFop::generate_pdf(fo_data, pdf_options)
+    begin
+      send_file(
+        pdf.path,
+        :stream => false, # If this was on, temp file would be deleted too early
+        :type => "application/pdf",
+        :filename => filename,
+        :disposition => download ? 'attachment' : 'inline'
+      )
+    ensure
+      # FIXME: To allow use of X-Send-File, use a separate cron task to delete
+      # stale pdf files periodically.
+      pdf.close!
+    end
+  end
+
+  def send_xlsx(table, filename)
+    file = Tempfile.new("excel")
+    begin
+      path = file.path
+      file.close!
+      SimpleXlsx::Serializer.new(path) do |bk|
+        bk.add_sheet("Report") do |sheet|
+          table.each do |row|
+            sheet.add_row row
+          end
+        end
+      end
+      send_file(
+        path,
+        :stream => false, # If this was on, temp file would be deleted too early
+        :type => Mime::XLSX,
+        :filename => filename,
+        :disposition => 'attachment'
+      )
+    ensure
+      # FIXME: To allow use of X-Send-File, use a separate cron task to delete
+      # stale files periodically.
+      File.unlink(path) if File.exists?(path)
+    end
+  end
+
+  def send_csv(table, filename)
+    file = Tempfile.new("csv")
+    begin
+      path = file.path
+      file.close!
+      FasterCSV.open(path, "w") do |csv|
+        table.each do |row|
+          csv << row
+        end
+      end
+      send_file(
+        path,
+        :stream => false, # If this was on, temp file would be deleted too early
+        :type => Mime::CSV,
+        :filename => filename,
+        :disposition => 'attachment'
+      )
+    ensure
+      # FIXME: To allow use of X-Send-File, use a separate cron task to delete
+      # stale files periodically.
+      File.unlink(path) if File.exists?(path)
+    end
+  end
+
+
   before_filter :load_params
   def load_params
     @layer_names = []

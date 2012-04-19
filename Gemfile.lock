@@ -72,6 +72,7 @@ DEPENDENCIES
   arel (~> 2.1)
   autowatchr
   factory_girl (= 2.0.4)
+  fastercsv
   googlecharts
   haml
   minitest
