@@ -162,26 +162,26 @@
           %xsl:value-of(select="./path")
         %xsl:value-of(select="./name")
 
-    -# Minimized version of the sidebar, just has the 'Show' button
-    %div#floating-sidebar-min.noprint
-      %div.floating-sidebar-button-bar
-        %a#sidebar-show-btn
-          %span.small-icon-view-sidebar.with-small-icon Sidebar
-
-    -# Sidebar with Print and Download buttons, and a table of contents
-    %div#floating-sidebar.noprint
-      %div.floating-sidebar-button-bar
-        %span#sidebar-hide-btn.small-icon-remove.with-small-icon
-        %a
-          %xsl:attribute(name="href")
-            %xsl:value-of(select="/env/context/print_path")
-          %span.small-icon-print.with-small-icon Print
-        %a#sidebar-download-btn
-          %span.small-icon-download.with-small-icon
-            Download
-      %span#floating-sidebar-contents
-        %span.floating-sidebar-header Report Contents
-        %ul#floating-sidebar-node-list
+    -# Sidebar with Print and download buttons, and a table of contents.
+    -# TODO Why is this even in XSLT? Should just put it in the view.
+    %div#sidebar
+      %span.sidebar-header Actions
+      %ul
+        %li
+          %a
+            %xsl:attribute(name="href")
+              %xsl:value-of(select="/env/context/print_path")
+            Print
+        %xsl:for-each(select="/env/context/download_paths/val")
+          %li
+            %a#sidebar-download-btn
+              %xsl:attribute(name="href")
+                %xsl:value-of(select="path")
+              Download
+              %xsl:value-of(select="name")
+      %span#sidebar-contents
+        %span.sidebar-header Report Contents
+        %ul#sidebar-node-list
           %xsl:apply-templates(select="node" mode="toc")
 
   %xsl:template(match="node" mode="toc")

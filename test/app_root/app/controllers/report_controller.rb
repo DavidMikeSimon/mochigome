@@ -200,9 +200,9 @@ class ReportController < ApplicationController
   end
 
   def output_report(data_node)
-    # These instance variables are used by the HTML morph
+    # These instance variables are used by the HTML transform
     # FIXME: Just do the non-data part of the sidebar in HAML instead
-    # To do that, use seperate morphs for sidebar links and main content
+    # To do that, use seperate transforms for sidebar links and main content
     @print_path = report_path(params.merge(:format => "pdf", :auto_print => true))
     @download_paths = []
     [
@@ -247,7 +247,6 @@ class ReportController < ApplicationController
           data_node.to_xml,
           transform_opts.merge(:tgt_format => "fo")
         )
-        puts fo_data
         send_pdf(fo_data, "#{filename}.pdf", params[:download],
           :from_url => report_url(params.merge(:format => "html")),
           :auto_print => !params[:download]

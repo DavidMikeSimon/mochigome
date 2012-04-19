@@ -43,6 +43,20 @@ body {
   border: 1px solid gray;
 }
 
+.report {
+  margin-left: 250px;
+}
+
+#sidebar {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 230px;
+  background-color: #ddd;
+  padding: 3px;
+  margin: 5px;
+}
+
 .report table {
   border-collapse: collapse;
   width: 100%;
