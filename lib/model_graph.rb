@@ -22,14 +22,15 @@ module Mochigome
         r += expr_models(e.send(m)) if e.respond_to?(m)
       end
       if e.respond_to?(:relation)
-        model = @table_to_model[e.relation.name]
-        raise ModelSetupError.new("Table->model lookup error") unless model
+        model = @table_to_model[e.relation.name] or
+          raise ModelSetupError.new("Table lookup error: #{e.relation.name}")
         r.add model
       end
       r
     end
 
     def relation_over_path(path)
+      update_assoc_graph(path)
       real_path = path.map(&:to_real_model).uniq
       # Project ensures that we return a Rel, not a Table, even if path is empty
       rel = real_path.first.arel_table.project
@@ -73,8 +74,7 @@ module Mochigome
       model_queue = models.dup
       added_models = []
       until model_queue.empty?
-        model = model_queue.shift
-        next if model.is_a?(SubgroupModel)
+        model = model_queue.shift.to_real_model
         next if @graphed_models.include? model
         @graphed_models.add model
         added_models << model
@@ -101,6 +101,7 @@ module Mochigome
           end
           @table_to_model[model.table_name] = common.first
         else
+          # TODO: Wait, isn't this just a base case of the above?
           @table_to_model[model.table_name] = model
         end
 
@@ -109,15 +110,16 @@ module Mochigome
         each do |name, assoc|
           # TODO: What about self associations?
           # TODO: What about associations to the same model on different keys?
-          next if assoc.options[:polymorphic] # TODO How to deal with these? Check for matching has_X assoc?
+          # TODO: How to deal with polymorphic? Check for matching has_X assoc?
+          next if assoc.options[:polymorphic]
           foreign_model = assoc.klass
+          unless @graphed_models.include?(foreign_model)
+            model_queue.push(foreign_model)
+          end
           edge = [model, foreign_model]
           next if @assoc_graph.has_edge?(*edge) # Ignore duplicate assocs
           @assoc_graph.add_edge(*edge)
           @edge_relation_funcs[edge] = model.arelified_assoc(name)
-          unless @graphed_models.include?(foreign_model)
-            model_queue.push(foreign_model)
-          end
         end
       end
 

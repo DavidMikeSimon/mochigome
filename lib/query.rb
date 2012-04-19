@@ -270,6 +270,7 @@ module Mochigome
         cond = [cond]
       end
       if cond.is_a?(Array)
+        # TODO: Should group by type and use IN expressions
         cond = cond.inject(nil) do |expr, obj|
           subexpr = obj.class.arel_primary_key.eq(obj.id)
           expr ? expr.or(subexpr) : subexpr

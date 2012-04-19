@@ -397,6 +397,14 @@ describe Mochigome::Query do
     assert_equal 1, data_node["Expensive products"]
   end
 
+  it "routes correctly from subgrouping to condition models" do
+    q = Mochigome::Query.new(
+      [Mochigome::SubgroupModel.new(Owner, :last_name)]
+    )
+    data_node = q.run([@product_a, @product_b])
+    assert_equal "Smith", (data_node/1).name
+  end
+
   it "does not include hidden aggregation fields in output" do
     q = Mochigome::Query.new(
       [Owner, Store],
