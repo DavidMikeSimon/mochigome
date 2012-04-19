@@ -56,19 +56,14 @@ module Mochigome
         real_tgt = tgt.to_real_model
         unless real_src == real_tgt
           seg = @shortest_paths[[real_src,real_tgt]]
-          unless seg
-            raise QueryError.new("No path: #{real_src.name} to #{real_tgt.name}")
-          end
+          return nil unless seg
           path.concat seg.take(seg.size-1).drop(1)
         end
         path << tgt
       end
-      unless path.uniq.size == path.size
-        raise QueryError.new(
-          "Path thru #{models.map(&:name).join('-')} doubles back: " +
-          path.map(&:name).join('-')
-        )
-      end
+
+      # Don't return any paths that double back
+      return nil unless path.uniq.size == path.size
       path
     end
 

@@ -240,7 +240,12 @@ module Mochigome
     end
 
     def join_on_path_thru(path)
-      join_on_path(@model_graph.path_thru(path).uniq)
+      full_path = @model_graph.path_thru(path).uniq
+      if full_path
+        join_on_path(full_path)
+      else
+        raise QueryError.new("Cannot route thru #{path.map(&:name).inspect}")
+      end
     end
 
     def join_on_path(path)
