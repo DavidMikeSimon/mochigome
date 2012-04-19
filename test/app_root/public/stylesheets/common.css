@@ -43,7 +43,7 @@ body {
   border: 1px solid gray;
 }
 
-.report {
+#report-body {
   margin-left: 250px;
 }
 

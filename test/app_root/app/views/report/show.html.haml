@@ -1,14 +1,6 @@
-- content_for :page_header_links do
-  - edit_params = params.dup
-  - edit_params[:action] = "edit"
+- edit_params = params.dup
+- edit_params[:action] = "edit"
+
+#report-body
   = link_to "Re-design this report", edit_report_path(edit_params)
-
-- @skip_inpage_title = true
-
-- content_for :screen_title do
-  = @report_name
-
-- content_for :head_additions do
-  = javascript_include_tag 'reporting.js'
-
-= @report_html
+  = @report_html
