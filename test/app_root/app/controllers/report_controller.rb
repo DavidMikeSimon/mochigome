@@ -224,7 +224,6 @@ class ReportController < ApplicationController
 
     transform_opts = {
       :src_type => "report",
-      :dir => "#{RAILS_ROOT}/app/morphs",
       :context => self
     }
 

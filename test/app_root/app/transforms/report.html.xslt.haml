@@ -1,0 +1,198 @@
+!!! XML
+%xsl:stylesheet(version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform")
+
+  %xsl:variable(name="detail_type" select="/env/context/layer_names/val[last()]")
+  %xsl:variable(name="subtable_type" select="/env/context/layer_names/val[last()-1]")
+
+  %xsl:template(match="/env/context")
+    -# Nothing
+
+  %xsl:template(match="/env/node")
+    %div.report
+      %xsl:choose
+        %xsl:when(test="string(/env/context/skip_root) = 'true'")
+          %xsl:apply-templates(select="node" mode="report-root")
+        %xsl:otherwise
+          %xsl:apply-templates(select="." mode="report-root")
+
+  -### REPORT CONTENT
+
+  %xsl:template(match="node" mode="report-root")
+    %xsl:call-template(name="print-warning")
+    %xsl:call-template(name="sidebar")
+    %xsl:call-template(name="report-header")
+    %xsl:call-template(name="charts")
+
+    %xsl:if(test="count(node)=0")
+      %tr.detail-row.no-data-row
+        %td
+          No data was found that matches this report's conditions.
+
+    %xsl:choose
+      %xsl:when(test="count(/env/context/layer_names/val) = 1")
+        %xsl:call-template(name="data-table")
+      %xsl:otherwise
+        %xsl:call-template(name="upper-node")
+
+  %xsl:template(name="report-header")
+    .report-header
+      %h1.node-name
+        %xsl:value-of(select="/env/context/report_name")
+      %xsl:if(test="count(/env/context/condition_descs/val) > 0")
+        %h3 Filtered by:
+        %ul.filter-list
+          %xsl:for-each(select="/env/context/condition_descs/val")
+            %li.filter
+              %xsl:value-of(select=".")
+      %xsl:if(test="count(datum) > 0")
+        %h3 Report totals:
+        %ul.data-list
+          %xsl:apply-templates(select="datum")
+
+  %xsl:template(name="charts")
+    %xsl:for-each(select="/env/context/charts/val")
+      %xsl:value-of(select="." disable-output-escaping="yes")
+
+  %xsl:template(match="node")
+    %xsl:choose
+      %xsl:when(test="@internal_type=$detail_type")
+        %tr.detail-row
+          %td.item-name
+            %xsl:value-of(select="@name")
+          %xsl:apply-templates
+      %xsl:when(test="@internal_type=$subtable_type")
+        %xsl:call-template(name="data-table")
+      %xsl:otherwise
+        %xsl:call-template(name="upper-node")
+
+  %xsl:template(name="upper-node")
+    %div.node
+      %div.internal-jump-handle
+        %xsl:attribute(name="id")
+          %xsl:value-of(select="generate-id(.)")
+      %xsl:variable(name="node_name" select="@name")
+      %xsl:if(test="@internal_type")
+        %xsl:variable(name="node_internal_type" select="@internal_type")
+        %xsl:for-each(select="/env/context/layer_names/val")
+          %xsl:if(test="$node_internal_type=string(.)")
+            %xsl:element(name="{concat('h',(position()+1))}")
+              %xsl:attribute(name="class") node-name
+              %xsl:value-of(select="$node_name")
+        %ul.data-list
+          %xsl:apply-templates(select="datum")
+      -# TODO: Do something to indicate that these datums are report
+      -# totals if this is the root node.
+      %xsl:apply-templates(select="node")
+
+  %xsl:template(match="datum")
+    %xsl:choose
+      %xsl:when(test="../@internal_type=$detail_type")
+        %td
+          %xsl:value-of(select=".")
+      %xsl:when(test="../@internal_type=$subtable_type")
+        -# Nothing, data was displayed in the subtable node template
+      %xsl:otherwise
+        %li.datum(class="datum-{@name}")
+          %label
+            %xsl:value-of(select="@name")
+          %span.value
+            %xsl:value-of(select=".")
+
+  %xsl:template(name="data-table")
+    %div.node.subtable-node
+      %div.internal-jump-handle
+        %xsl:attribute(name="id")
+          %xsl:value-of(select="generate-id(.)")
+      %table
+        %col.item-name
+        %thead
+          %tr.subtable-name-row
+            %th
+              %xsl:if(test="count(node)>0")
+                %xsl:attribute(name="colspan")
+                  %xsl:value-of(select="count(node[1]/datum)+1")
+              %xsl:value-of(select="@name")
+          %tr.header-row
+            %th.item-name
+              -# Skip this column
+            %xsl:for-each(select="node[1]/datum")
+              %th
+                %xsl:value-of(select="@name")
+          %xsl:if(test="count(node)>0")
+            %tr.subtable-datum-row
+              %td.item-name
+                %xsl:value-of(select="@type")
+                Total:
+                %xsl:value-of(select="count(node)")
+              %xsl:variable(name="node" select=".")
+              %xsl:for-each(select="node[1]/datum")
+                %td
+                  %xsl:variable(name="tgtname" select="@name")
+                  %xsl:if(test="$node/datum[@name=$tgtname]")
+                    %xsl:value-of(select="$node/datum[@name=$tgtname]")
+        %tbody
+          %xsl:if(test="count(node)=0")
+            %tr.detail-row.no-data-row
+              %td
+                No data
+          %xsl:apply-templates(select="node")
+
+  %xsl:template(name="print-warning")
+    %div.printonly.bad-print-warning
+      %p
+        %strong Warning:
+        This printout does not have correct formatting.
+      %p.tight
+        For better results, use the
+        %i Print
+        button in the report sidebar on the left,
+        %b not
+        your browser's print function.
+
+
+  -### REPORT SIDEBAR
+
+  %xsl:template(name="sidebar")
+    -# Hidden links to tell javascript about download targets
+    %xsl:for-each(select="/env/context/download_paths/val")
+      %a(style="display: none" class="report-download-link")
+        %xsl:attribute(name="id")
+          %xsl:value-of(select="concat('report-download-link-', ./ext)")
+        %xsl:attribute(name="href")
+          %xsl:value-of(select="./path")
+        %xsl:value-of(select="./name")
+
+    -# Minimized version of the sidebar, just has the 'Show' button
+    %div#floating-sidebar-min.noprint
+      %div.floating-sidebar-button-bar
+        %a#sidebar-show-btn
+          %span.small-icon-view-sidebar.with-small-icon Sidebar
+
+    -# Sidebar with Print and Download buttons, and a table of contents
+    %div#floating-sidebar.noprint
+      %div.floating-sidebar-button-bar
+        %span#sidebar-hide-btn.small-icon-remove.with-small-icon
+        %a
+          %xsl:attribute(name="href")
+            %xsl:value-of(select="/env/context/print_path")
+          %span.small-icon-print.with-small-icon Print
+        %a#sidebar-download-btn
+          %span.small-icon-download.with-small-icon
+            Download
+      %span#floating-sidebar-contents
+        %span.floating-sidebar-header Report Contents
+        %ul#floating-sidebar-node-list
+          %xsl:apply-templates(select="node" mode="toc")
+
+  %xsl:template(match="node" mode="toc")
+    %li.toc-item
+      %a
+        %xsl:attribute(name="href")
+          %xsl:value-of(select="concat('#',generate-id(.))")
+        %xsl:value-of(select="@name")
+      %xsl:if(test="count(node)>0 and node[1]/@internal_type!=$detail_type")
+        %ul
+          %xsl:apply-templates(mode="toc")
+
+  %xsl:template(match="datum" mode="toc")
+    -# Nothing
