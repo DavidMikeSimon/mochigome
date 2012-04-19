@@ -3,6 +3,10 @@ class Store < ActiveRecord::Base
     f.type_name "Storefront"
   end
 
+  has_mochigome_aggregations do |a|
+    a.fields [:count]
+  end
+
   belongs_to :owner
   has_many :store_products
   has_many :products, :through => :store_products

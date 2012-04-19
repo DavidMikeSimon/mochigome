@@ -15,11 +15,9 @@ class ReportController < ApplicationController
   end
 
   AGGREGATE_SOURCES = [
-    ["Staff Attendance", "User:AttendanceRecord"],
-    ["Staff Count", "User"],
-    ["School Count", "School"],
-    ["Student Attendance", "Student:AttendanceRecord"],
-    ["Student Count", "Student"]
+    ["Sales", "Sale"],
+    ["Product Count", "Product"],
+    ["Store Count", "Store"]
   ]
 
   def show
