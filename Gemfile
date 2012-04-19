@@ -22,4 +22,4 @@ gem 'autowatchr'
 gem 'haml'
 gem 'googlecharts', :require => 'gchart'
 gem "simple_xlsx_writer", :require => "simple_xlsx"
-gem 'xslt-morpheus', '0.1'
+gem 'xslt-morpheus', '0.1', :require => "morpheus"
