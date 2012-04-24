@@ -181,7 +181,7 @@ module Mochigome
         end
       else
         node.children.each do |c|
-          subtable = table[c[:id]] or next
+          subtable = table[c[:id]] || []
           insert_aggregate_data_fields(c, subtable, data_model)
         end
       end
