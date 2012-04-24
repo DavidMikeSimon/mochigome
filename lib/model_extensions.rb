@@ -81,7 +81,7 @@ module Mochigome
 
           # TODO: Apply association conditions.
 
-          r.join(ftable, Arel::Nodes::OuterJoin).on(cond)
+          r.join(ftable, Arel::Nodes::InnerJoin).on(cond)
         end
       end
 

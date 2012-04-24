@@ -3,7 +3,7 @@ class Sale < ActiveRecord::Base
     a.fields [:count, {
       "Gross" => [:sum, lambda {|t|
         Product.arel_table[:price]
-      }]
+      }, {:default => 0}]
     }]
   end
 

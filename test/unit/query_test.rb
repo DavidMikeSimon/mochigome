@@ -423,8 +423,6 @@ describe Mochigome::Query do
     assert_equal 4, data_node["Count squared"]
   end
 
-  # TODO: Test case where data model is already in layer path
-  # TODO: Test case where the condition is deeper than the focus model
   # TODO: Test use of non-trivial function for aggregation value
 
   it "puts a comment on the root node describing the query" do
@@ -503,5 +501,16 @@ describe Mochigome::Query do
     assert_equal 2, dn.children.size
   end
 
-  # TODO: Test that access filter join paths are followed, rather than closest path
+  it "uses default values for aggregations on an empty result set" do
+    Sale.destroy_all
+    q = Mochigome::Query.new(
+      [Store, Product],
+      :aggregate_sources => [[Product, Sale]]
+    )
+    dn = q.run
+    assert_equal 3, dn.children.size
+    assert_equal 0, dn['Gross']
+    assert_equal 0, (dn/0)['Gross']
+    assert_equal 0, (dn/0/0)['Gross']
+  end
 end

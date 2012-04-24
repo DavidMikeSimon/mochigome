@@ -166,14 +166,18 @@ module Mochigome
       if table.is_a? Array
         fields = data_model.mochigome_aggregation_settings.options[:fields]
         # Pre-fill the node with all fields in the right order
-        fields.each{|agg| node[agg[:name]] = nil unless agg[:hidden] }
+        fields.each{|agg| node[agg[:name]] = agg[:default] unless agg[:hidden] }
         agg_row = {} # Hold regular aggs here to be used in ruby-based aggs
         fields.reject{|agg| agg[:in_ruby]}.zip(table).each do |agg, v|
+          v ||= agg[:default]
           agg_row[agg[:name]] = v
           node[agg[:name]] = v unless agg[:hidden]
         end
         fields.select{|agg| agg[:in_ruby]}.each do |agg|
           node[agg[:name]] = agg[:ruby_proc].call(agg_row)
+        end
+        node.children.each do |c|
+          insert_aggregate_data_fields(c, [], data_model)
         end
       else
         node.children.each do |c|
