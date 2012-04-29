@@ -22,13 +22,11 @@ module Mochigome
           else [a, a]
         end
 
-        agg_rel = Relation.new(@layer_types) # TODO Only go as far as focus
-        agg_rel.join_to_model(focus_model)
+        agg_rel = Relation.new(@layer_types)
         agg_rel.join_on_path_thru([focus_model, data_model])
         agg_rel.apply_access_filter_func(@access_filter)
 
-        key_models = @ids_rel.spine_layers_thru(focus_model)
-        key_cols = key_models.map{|m| m.arel_primary_key}
+        key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
 
         agg_fields = data_model.mochigome_aggregation_settings.
           options[:fields].reject{|a| a[:in_ruby]}
@@ -83,7 +81,6 @@ module Mochigome
         Mochigome Version: #{Mochigome::VERSION}
         Report Generated: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
-        AR Path: #{@ids_rel.full_spine_path.map(&:name).join(" => ")}
       eos
       root.comment.gsub!(/(\n|^) +/, "\\1")
 
@@ -210,14 +207,8 @@ module Mochigome
       @rel.to_sql
     end
 
-    def full_spine_path
-      @spine.dup
-    end
-
-    def spine_layers_thru(model)
-      r = @spine.take_while{|m| m != model}
-      r << model unless r.size == @spine.size
-      r.select{|m| @spine_layers.include? m}
+    def spine_layers
+      @spine_layers.clone
     end
 
     def clone
@@ -254,6 +245,7 @@ module Mochigome
 
     def join_on_path(path)
       path = path.map(&:to_real_model).uniq
+      join_to_model path.first
       (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
         add_join_link src, tgt
       end

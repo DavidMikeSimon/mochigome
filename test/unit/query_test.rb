@@ -305,20 +305,6 @@ describe Mochigome::Query do
     assert_equal 24, data_node['Sales count']
   end
 
-  it "does not collect aggregate data for layers below focus" do
-    q = Mochigome::Query.new(
-      [Owner, Store, Product, Category],
-      :aggregate_sources => [[Product, Sale]]
-    )
-    data_node = q.run
-
-    assert_equal "Product", (data_node/0/0/0)[:internal_type]
-    refute_nil (data_node/0/0/0)['Sales count']
-
-    assert_equal "Category", (data_node/0/0/0/0)[:internal_type]
-    assert_nil (data_node/0/0/0/0)['Sales count']
-  end
-
   it "can collect aggregate data involving joins to tables not on path" do
     q = Mochigome::Query.new(
       [Owner, Store],
@@ -432,7 +418,6 @@ describe Mochigome::Query do
     assert_match c, /^Mochigome Version: #{Mochigome::VERSION}\n/
     assert_match c, /\nReport Generated: \w{3} \w{3} \d+ .+\n/
     assert_match c, /\nLayers: Owner => Store => Product\n/
-    assert_match c, /\nAR Path: Owner => Store => StoreProduct => Product\n/
   end
 
   it "names the root node 'report' by default" do
