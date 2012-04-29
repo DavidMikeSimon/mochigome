@@ -82,6 +82,9 @@ module Mochigome
         Report Generated: #{Time.now}
         Layers: #{@layer_types.map(&:name).join(" => ")}
       eos
+      @ids_rel.joins.each do |src, tgt|
+        root.comment += "Join: #{src.name} -> #{tgt.name}\n"
+      end
       root.comment.gsub!(/(\n|^) +/, "\\1")
 
       r = @ids_rel.clone
@@ -188,11 +191,14 @@ module Mochigome
   private
 
   class Relation
+    attr_reader :joins, :spine_layers
+
     def initialize(layers)
       @model_graph = ModelGraph.new
       @spine_layers = layers
       @models = Set.new
       @spine = []
+      @joins = []
 
       @spine_layers.map(&:to_real_model).uniq.each do |m|
         if @rel
@@ -212,10 +218,6 @@ module Mochigome
 
     def to_sql
       @rel.to_sql
-    end
-
-    def spine_layers
-      @spine_layers.clone
     end
 
     def clone
@@ -307,6 +309,7 @@ module Mochigome
       return if @models.include?(tgt) # TODO Maybe still apply join conditions?
       @rel = @model_graph.relation_func(src, tgt).call(@rel)
       @models.add tgt
+      @joins << [src, tgt]
     end
   end
 end
