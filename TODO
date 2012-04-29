@@ -4,5 +4,4 @@
   - Alternately, always ignore conditional associations unless they're specifically provided to Mochigome by the model
 - Named subsets of different fields and agg fields on a single model
 - Some kind of single-page preview on the edit screen would be cool. Maybe use FOP with fake data and the PNG output option?
-- Allow inwards-branching join patterns on layer list (i.e. Category->Store->Product)
 - Automatically set default to 0 on sum and count aggregation

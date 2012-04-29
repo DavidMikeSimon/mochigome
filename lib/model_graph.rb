@@ -29,15 +29,9 @@ module Mochigome
       r
     end
 
-    def relation_over_path(path)
-      update_assoc_graph(path)
-      real_path = path.map(&:to_real_model).uniq
-      # Project ensures that we return a Rel, not a Table, even if path is empty
-      rel = real_path.first.arel_table.project
-      (0..(real_path.size-2)).each do |i|
-        rel = relation_func(real_path[i], real_path[i+1]).call(rel)
-      end
-      rel
+    def relation_init(model)
+      update_assoc_graph([model])
+      model.arel_table.project # Project to convert Arel::Table to Arel::Rel
     end
 
     def relation_func(u, v)

@@ -180,7 +180,19 @@ describe Mochigome::Query do
     assert_equal 8, (data_node/1)['Sales count']
   end
 
-  # TODO: Test diamond patterns
+  it "can group through a list that has no direct association path" do
+    q = Mochigome::Query.new(
+      [Category, Store, Product],
+      :aggregate_sources => [Sale]
+    )
+    data_node = q.run
+    assert_equal "Category 1", (data_node/0).name
+    assert_equal 15, (data_node/0)["Sales count"]
+    assert_equal "John's Store", (data_node/0/0).name
+    assert_equal 5, (data_node/0/0)["Sales count"]
+    assert_equal "Product A", (data_node/0/0/0).name
+    assert_equal 5, (data_node/0/0/0)["Sales count"]
+  end
 
   it "collects aggregate data by grouping on all layers" do
     q = Mochigome::Query.new(

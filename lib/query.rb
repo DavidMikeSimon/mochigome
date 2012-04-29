@@ -191,11 +191,18 @@ module Mochigome
     def initialize(layers)
       @model_graph = ModelGraph.new
       @spine_layers = layers
-      @spine = @model_graph.path_thru(layers) or
-        raise QueryError.new("No valid path thru #{layers.inspect}") #TODO Test
-      @models = Set.new @spine.map(&:to_real_model)
-      @rel = @model_graph.relation_over_path(@spine)
+      @models = Set.new
+      @spine = []
 
+      @spine_layers.map(&:to_real_model).uniq.each do |m|
+        if @rel
+          join_to_model(m)
+        else
+          @rel = @model_graph.relation_init(m)
+          @models.add m
+        end
+        @spine << m
+      end
       @spine_layers.each{|m| select_model_id(m)}
     end
 
