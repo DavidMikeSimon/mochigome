@@ -307,7 +307,9 @@ module Mochigome
       raise QueryError.new("Can't join from #{src}, not available") unless
         @models.include?(src)
       return if @models.include?(tgt) # TODO Maybe still apply join conditions?
-      @rel = @model_graph.relation_func(src, tgt).call(@rel)
+      @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(
+        @model_graph.edge_condition(src, tgt)
+      )
       @models.add tgt
       @joins << [src, tgt]
     end

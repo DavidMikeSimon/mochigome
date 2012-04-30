@@ -11,7 +11,7 @@ module Mochigome
       @graphed_models = Set.new
       @table_to_model = {}
       @assoc_graph = RGL::DirectedAdjacencyGraph.new
-      @edge_relation_funcs = {}
+      @edge_conditions = {}
       @shortest_paths = {}
     end
 
@@ -34,9 +34,8 @@ module Mochigome
       model.arel_table.project # Project to convert Arel::Table to Arel::Rel
     end
 
-    def relation_func(u, v)
-      @edge_relation_funcs[[u,v]] or
-        raise QueryError.new "No assoc from #{u.name} to #{v.name}"
+    def edge_condition(u, v)
+      @edge_conditions[[u,v]]
     end
 
     def path_thru(models)
@@ -113,7 +112,7 @@ module Mochigome
           edge = [model, foreign_model]
           next if @assoc_graph.has_edge?(*edge) # Ignore duplicate assocs
           @assoc_graph.add_edge(*edge)
-          @edge_relation_funcs[edge] = model.arelified_assoc(name)
+          @edge_conditions[edge] = model.assoc_condition(name)
         end
       end
 

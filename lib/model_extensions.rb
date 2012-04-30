@@ -54,37 +54,35 @@ module Mochigome
         write_inheritable_attribute :mochigome_aggregation_settings, settings
       end
 
-      def arelified_assoc(name)
+      def assoc_condition(name)
         # TODO: Deal with polymorphic assocs.
         model = self
         assoc = reflect_on_association(name)
         raise AssociationError.new("No such assoc #{name}") unless assoc
         table = Arel::Table.new(table_name)
         ftable = Arel::Table.new(assoc.klass.table_name)
-        lambda do |r|
-          # FIXME: This acts as though arel methods are non-destructive,
-          # but they are, right? Except, I can't remove the rel
-          # assignment from relation_over_path...
-          cond = nil
-          if assoc.belongs_to?
-            cond = table[assoc.association_foreign_key].eq(
-              ftable[assoc.klass.primary_key]
-            )
-          else
-            cond = table[primary_key].eq(ftable[assoc.primary_key_name])
-          end
 
-          if assoc.options[:as]
-            # FIXME Can we assume that this is the polymorphic type field?
-            cond = cond.and(ftable["#{assoc.options[:as]}_type"].eq(model.name))
-          end
-
-          # TODO: Apply association conditions.
-
-          r.join(ftable, Arel::Nodes::InnerJoin).on(cond)
+        # FIXME: This acts as though arel methods are non-destructive,
+        # but they are, right? Except, I can't remove the rel
+        # assignment from relation_over_path...
+        cond = nil
+        if assoc.belongs_to?
+          cond = table[assoc.association_foreign_key].eq(
+            ftable[assoc.klass.primary_key]
+          )
+        else
+          cond = table[primary_key].eq(ftable[assoc.primary_key_name])
         end
-      end
 
+        if assoc.options[:as]
+          # FIXME Can we assume that this is the polymorphic type field?
+          cond = cond.and(ftable["#{assoc.options[:as]}_type"].eq(model.name))
+        end
+
+        # TODO: Apply association conditions.
+
+        return cond
+      end
     end
 
     module InstanceMethods

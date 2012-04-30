@@ -364,8 +364,8 @@ describe "an ActiveRecord model" do
     assert agg[:in_ruby]
   end
 
-  def assoc_query_words_match(assoc, words)
-    q = assoc.call(Arel::Table.new(:foo).project(Arel.star)).to_sql
+  def assoc_query_words_match(tbl, cond, words)
+    q = Arel::Table.new(:foo).project(Arel.star).join(Arel::Table.new(tbl)).on(cond).to_sql
     cur_word = words.shift
     q.split(/[ .]/).each do |s_word|
       if s_word.gsub(/["'`]+/, '').downcase == cur_word.downcase
@@ -380,7 +380,7 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       belongs_to :store
     end
-    assert assoc_query_words_match @model_class.arelified_assoc(:store),
+    assert assoc_query_words_match "stores", @model_class.assoc_condition(:store),
       %w{select * from foo join stores on fake store_id = stores id}
   end
 
@@ -388,7 +388,7 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       has_many :stores
     end
-    assert assoc_query_words_match @model_class.arelified_assoc(:stores),
+    assert assoc_query_words_match "stores", @model_class.assoc_condition(:stores),
       %w{select * from foo join stores on fake id = stores whale_id}
   end
 
@@ -396,13 +396,13 @@ describe "an ActiveRecord model" do
     @model_class.class_eval do
       has_one :store
     end
-    assert assoc_query_words_match @model_class.arelified_assoc(:store),
+    assert assoc_query_words_match "stores", @model_class.assoc_condition(:store),
       %w{select * from foo join stores on fake id = stores whale_id}
   end
 
   it "raises AssociationError on attempting to arelify a non-extant assoc" do
     assert_raises Mochigome::AssociationError do
-      Store.arelified_assoc(:dinosaurs)
+      Store.assoc_condition(:dinosaurs)
     end
   end
 
