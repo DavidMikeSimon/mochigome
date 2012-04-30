@@ -241,6 +241,14 @@ module Mochigome
 
       raise QueryError.new("No path to #{model}") unless best_path
       join_on_path(best_path)
+
+      # TODO: Write a test that requires the below code to work
+      @models.reject{|n| best_path.include?(n)}.each do |n|
+        cond = @model_graph.edge_condition(n, model)
+        if cond
+          @rel = @rel.where(cond)
+        end
+      end
     end
 
     def join_on_path_thru(path)
@@ -256,7 +264,7 @@ module Mochigome
       path = path.map(&:to_real_model).uniq
       join_to_model path.first
       (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
-        add_join_link src, tgt
+        add_join_link(src, tgt) unless @models.include?(tgt)
       end
     end
 
@@ -306,7 +314,6 @@ module Mochigome
     def add_join_link(src, tgt)
       raise QueryError.new("Can't join from #{src}, not available") unless
         @models.include?(src)
-      return if @models.include?(tgt) # TODO Maybe still apply join conditions?
       @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(
         @model_graph.edge_condition(src, tgt)
       )
