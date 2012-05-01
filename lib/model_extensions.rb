@@ -97,16 +97,36 @@ module Mochigome
   # in there?
 
   def self.null_unless(pred, value_func)
+    case_expr(
+      lambda {|t| pred.call(value_func.call(t))},
+      value_func,
+      value_func,
+      Arel::Nodes::SqlLiteral.new("NULL")
+    )
+  end
+
+  def self.case_expr(table_pred, value_func, then_val, else_val)
     lambda {|t|
-      value = value_func.call(t)
-      val_expr = Arel::Nodes::NamedFunction.new('',[value])
       Arel::Nodes::SqlLiteral.new(
-        "(CASE WHEN #{pred.call(value).to_sql} THEN #{val_expr.to_sql} ELSE NULL END)"
+        "(CASE WHEN #{arel_exprify(table_pred, t)} " +
+        "THEN #{arel_exprify(then_val, t)} " +
+        "ELSE #{arel_exprify(else_val, t)} END)"
       )
     }
   end
 
   private
+
+  def self.arel_exprify(e, t = nil)
+    e = e.call(t) if e.respond_to?(:call)
+    if e.respond_to?(:to_sql)
+      e = e.to_sql
+    elsif e.is_a?(Arel::Attributes::Attribute)
+      # Converts an Attribute to an SQL expression string
+      e = Arel::Nodes::NamedFunction.new('',[e]).to_sql
+    end
+    e
+  end
 
   class ReportFocus
     attr_reader :type_name
