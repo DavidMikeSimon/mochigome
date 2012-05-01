@@ -100,12 +100,11 @@ module Mochigome
     case_expr(
       lambda {|t| pred.call(value_func.call(t))},
       value_func,
-      value_func,
       Arel::Nodes::SqlLiteral.new("NULL")
     )
   end
 
-  def self.case_expr(table_pred, value_func, then_val, else_val)
+  def self.case_expr(table_pred, then_val, else_val)
     lambda {|t|
       Arel::Nodes::SqlLiteral.new(
         "(CASE WHEN #{arel_exprify(table_pred, t)} " +
