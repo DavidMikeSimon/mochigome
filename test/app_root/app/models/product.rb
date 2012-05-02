@@ -1,6 +1,13 @@
 class Product < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
     f.fields [:price]
+    f.custom_subgroup_expression :name_ends_with_vowel,
+      Mochigome::case_expr(
+        Arel::Nodes::NamedFunction.new("SUBSTR", [Product.arel_table[:name], -1]).
+          in(['a','e','i','o','u','A','E','I','O','U']),
+        "Vowel",
+        "Consonant"
+      ).call(Product.arel_table)
   end
   has_mochigome_aggregations do |a|
     a.fields [

@@ -118,13 +118,8 @@ module Mochigome
 
   def self.arel_exprify(e, t = nil)
     e = e.call(t) if e.respond_to?(:call)
-    if e.respond_to?(:to_sql)
-      e = e.to_sql
-    elsif e.is_a?(Arel::Attributes::Attribute)
-      # Converts an Attribute to an SQL expression string
-      e = Arel::Nodes::NamedFunction.new('',[e]).to_sql
-    end
-    e
+    e = Arel::Nodes::NamedFunction.new('',[e]) unless e.respond_to?(:to_sql)
+    e.to_sql
   end
 
   class ReportFocus
@@ -160,6 +155,7 @@ module Mochigome
       @model = model
       @options = {}
       @options[:fields] = []
+      @options[:custom_subgroup_exprs] = {}
     end
 
     def type_name(n)
@@ -199,6 +195,10 @@ module Mochigome
         else raise ModelSetupError.new "Invalid field: #{f.inspect}"
         end
       end
+    end
+
+    def custom_subgroup_expression(name, expr)
+      @options[:custom_subgroup_exprs][name] = expr
     end
   end
 

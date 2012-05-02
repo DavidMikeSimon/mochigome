@@ -180,6 +180,18 @@ describe Mochigome::Query do
     assert_equal 8, (data_node/1)['Sales count']
   end
 
+  it "can subgroup layers with custom expressions" do
+    q = Mochigome::Query.new(
+      [Store, Mochigome::SubgroupModel.new(Product, :name_ends_with_vowel), Product]
+    )
+    data_node = q.run
+    assert_equal "Jane's Store (North)", (data_node/1).name
+    assert_equal "Consonant", (data_node/1/0).name
+    assert_equal 1, (data_node/1/0).children.size
+    assert_equal "Vowel", (data_node/1/1).name
+    assert_equal 2, (data_node/1/1).children.size
+  end
+
   it "can group through a list that has no direct association path" do
     q = Mochigome::Query.new(
       [Category, Store, Product],

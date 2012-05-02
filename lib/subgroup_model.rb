@@ -8,6 +8,11 @@ module Mochigome
     def initialize(model, attr)
       @model = model
       @attr = attr
+      if @model.mochigome_focus_settings
+        s = @model.mochigome_focus_settings
+        # @attr_expr will just be nil if there's no custom subgroup expr here
+        @attr_expr = s.options[:custom_subgroup_exprs][attr]
+      end
       @focus_settings = Mochigome::ReportFocusSettings.new(@model)
       @focus_settings.type_name "#{@model.human_name} #{@attr.to_s.humanize}"
       @focus_settings.name lambda{|r| r.send(attr)}
@@ -38,7 +43,11 @@ module Mochigome
     end
 
     def arel_primary_key
-      arel_table[@attr]
+      if @attr_expr
+        @attr_expr
+      else
+        arel_table[@attr]
+      end
     end
 
     def connection
