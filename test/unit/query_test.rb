@@ -182,7 +182,11 @@ describe Mochigome::Query do
 
   it "can subgroup layers with custom expressions" do
     q = Mochigome::Query.new(
-      [Store, Mochigome::SubgroupModel.new(Product, :name_ends_with_vowel), Product]
+      [
+        Store,
+        Mochigome::SubgroupModel.new(Product, :name_ends_with_vowel),
+        Product
+      ]
     )
     data_node = q.run
     assert_equal "Jane's Store (North)", (data_node/1).name
@@ -190,6 +194,23 @@ describe Mochigome::Query do
     assert_equal 1, (data_node/1/0).children.size
     assert_equal "Vowel", (data_node/1/1).name
     assert_equal 2, (data_node/1/1).children.size
+  end
+
+  it "can collect aggregate data with custom expression subgroups" do
+    q = Mochigome::Query.new(
+      [
+        Store,
+        Mochigome::SubgroupModel.new(Product, :name_ends_with_vowel),
+      ],
+      :aggregate_sources => [Product]
+    )
+    data_node = q.run
+    assert_equal "Jane's Store (North)", (data_node/1).name
+    assert_equal "Consonant", (data_node/1/0).name
+    assert_equal @product_b.price, (data_node/1/0)['Products sum price']
+    assert_equal "Vowel", (data_node/1/1).name
+    assert_equal [@product_a, @product_e].map(&:price).sum,
+      (data_node/1/1)['Products sum price']
   end
 
   it "can group through a list that has no direct association path" do
