@@ -38,6 +38,14 @@ describe Mochigome::Query do
     ].each do |sp, n|
       n.times{create(:sale, :store_product => sp)}
     end
+
+    (1..5).each do |div_num|
+      WidgetDivisor.create(:divisor => div_num)
+    end
+
+    (1..25).each do |num|
+      Widget.create(:number => num)
+    end
   end
 
   after do
@@ -47,6 +55,8 @@ describe Mochigome::Query do
     Store.delete_all
     StoreProduct.delete_all
     Sale.delete_all
+    WidgetDivisor.delete_all
+    Widget.delete_all
   end
 
   # Convenience functions to check DataNode output validity
@@ -543,5 +553,16 @@ describe Mochigome::Query do
     assert_equal 0, dn['Gross']
     assert_equal 0, (dn/0)['Gross']
     assert_equal 0, (dn/0/0)['Gross']
+  end
+
+  it "can use custom associations to link records" do
+    q = Mochigome::Query.new([WidgetDivisor, Widget])
+    dn = q.run
+    assert_equal "Divisor 1", (dn/0).name
+    assert_equal 25, (dn/0).children.size
+    assert_equal "Divisor 2", (dn/1).name
+    assert_equal 12, (dn/1).children.size
+    assert_equal "Divisor 5", (dn/4).name
+    assert_equal 5, (dn/4).children.size
   end
 end

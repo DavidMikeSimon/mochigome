@@ -51,6 +51,14 @@ class CreateTables < ActiveRecord::Migration
       t.string :foo
       t.string :bar
     end
+
+    # These models are for testing custom associations
+    create_table :widgets do |t|
+      t.integer :number
+    end
+    create_table :widget_divisors do |t|
+      t.integer :divisor
+    end
   end
 
   def self.down

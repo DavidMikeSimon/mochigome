@@ -114,6 +114,15 @@ module Mochigome
           @assoc_graph.add_edge(*edge)
           @edge_conditions[edge] = model.assoc_condition(name)
         end
+
+        if model.acts_as_mochigome_focus?
+          model.mochigome_focus_settings.options[:custom_assocs].each do |t,e|
+            edge = [model, t]
+            # This deliberately allows user to override existing assocs
+            @assoc_graph.add_edge(*edge)
+            @edge_conditions[edge] = e.call(*(edge.map(&:arel_table)))
+          end
+        end
       end
 
       added_models.each do |model|

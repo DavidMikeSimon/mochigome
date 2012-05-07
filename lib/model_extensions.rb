@@ -75,7 +75,7 @@ module Mochigome
         end
 
         if assoc.options[:as]
-          # FIXME Can we assume that this is the polymorphic type field?
+          # FIXME Can we really assume that this is the polymorphic type field?
           cond = cond.and(ftable["#{assoc.options[:as]}_type"].eq(model.name))
         end
 
@@ -156,6 +156,7 @@ module Mochigome
       @options = {}
       @options[:fields] = []
       @options[:custom_subgroup_exprs] = {}
+      @options[:custom_assocs] = {}
     end
 
     def type_name(n)
@@ -199,6 +200,10 @@ module Mochigome
 
     def custom_subgroup_expression(name, expr)
       @options[:custom_subgroup_exprs][name] = expr
+    end
+
+    def custom_association(tgt_cls, expr)
+      @options[:custom_assocs][tgt_cls] = expr
     end
   end
 
