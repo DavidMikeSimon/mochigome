@@ -289,6 +289,12 @@ module Mochigome
     :sum => lambda{|a| a.sum}
   }
 
+  AGG_FUNC_DEFAULTS = {
+    :count => 0,
+    :distinct => 0,
+    :sum => 0
+  }
+
   # Given an object, tries to coerce it into a proc that takes a node
   # and returns an expression node to collect some aggregate data from it.
   def self.aggregation_proc(obj)
@@ -335,9 +341,15 @@ module Mochigome
       raise ModelSetupError.new "Wrong # of components for agg: #{obj.inspect}"
     end
 
-    {
+    r = {
       :agg_proc => aggregation_proc(vals[0]),
       :value_proc => value_proc(vals[1])
     }.merge(vals[2] || {})
+
+    if AGG_FUNC_DEFAULTS.has_key?(vals[0])
+      r[:default] = AGG_FUNC_DEFAULTS[vals[0]]
+    end
+
+    r
   end
 end

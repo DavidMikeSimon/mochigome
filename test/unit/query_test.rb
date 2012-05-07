@@ -555,6 +555,19 @@ describe Mochigome::Query do
     assert_equal 0, (dn/0/0)['Gross']
   end
 
+  it "assumes 0 as a default value for appropriate simple aggregations" do
+    Sale.destroy_all
+    q = Mochigome::Query.new(
+      [Store, Product],
+      :aggregate_sources => [[Product, Sale]]
+    )
+    dn = q.run
+    assert_equal 3, dn.children.size
+    assert_equal 0, dn['Sales count']
+    assert_equal 0, (dn/0)['Sales count']
+    assert_equal 0, (dn/0/0)['Sales count']
+  end
+
   it "can use custom associations to link records" do
     q = Mochigome::Query.new([WidgetDivisor, Widget])
     dn = q.run
