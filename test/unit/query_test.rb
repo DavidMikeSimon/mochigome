@@ -565,4 +565,13 @@ describe Mochigome::Query do
     assert_equal "Divisor 5", (dn/4).name
     assert_equal 5, (dn/4).children.size
   end
+
+  it "can follow custom associations in reverse" do
+    q = Mochigome::Query.new([Widget, WidgetDivisor])
+    dn = q.run
+    assert_equal "Widget 1", (dn/0).name
+    assert_equal 1, (dn/0).children.size
+    assert_equal "Widget 6", (dn/5).name
+    assert_equal 3, (dn/5).children.size
+  end
 end

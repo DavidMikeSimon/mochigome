@@ -117,10 +117,13 @@ module Mochigome
 
         if model.acts_as_mochigome_focus?
           model.mochigome_focus_settings.options[:custom_assocs].each do |t,e|
-            edge = [model, t]
-            # This deliberately allows user to override existing assocs
-            @assoc_graph.add_edge(*edge)
-            @edge_conditions[edge] = e.call(*(edge.map(&:arel_table)))
+            cond = e.call(model.arel_table, t.arel_table)
+            [[model, t], [t, model]]. each do |edge|
+              @assoc_graph.add_edge(*edge)
+              # This deliberately allows custom assocs to overwrite normal ones
+              @edge_conditions[edge] = cond
+            end
+            added_models << t unless added_models.include?(t)
           end
         end
       end
