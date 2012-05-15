@@ -101,7 +101,7 @@ describe Mochigome::DataNode do
       @datanode.comment = "Foo"
       @datanode.merge! [{:id => 400}, {:apples => 1}, {:box_cutters => 2}, {:can_openers => 3}]
       emp1 = @datanode << Mochigome::DataNode.new(:employee, :alice)
-      emp1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Cyborg"}]
+      emp1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Cyborg"}, {:_foo => "bar"}]
       emp2 = @datanode << Mochigome::DataNode.new(:employee, :bob)
       emp2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}, {:internal_type => "Human"}]
       emp2 << Mochigome::DataNode.new(:pet, :lassie)
@@ -122,8 +122,8 @@ describe Mochigome::DataNode do
       ]
     end
 
-    it "can convert to an XML document with ids, names, types, and internal_types as attributes" do
-      # Why stringify and reparse it? So that we could switch to another XML generator.
+    it "can convert to an XML document with correct attributes and elements" do
+      # Why stringify and reparse? So that we could use another XML generator
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
       comment = doc.xpath('/node[@type="Corporation"]/comment()').first
@@ -139,8 +139,14 @@ describe Mochigome::DataNode do
       assert_equal "alice", emp_nodes.first['name']
       assert_equal "bob", emp_nodes.last['name']
       assert_equal "Cyborg", emp_nodes.first['internal_type']
-      assert_equal "4", emp_nodes.last.xpath('./datum[@name="Y"]').first.content
+      assert_equal "4", emp_nodes.last.xpath('datum[@name="Y"]').first.content
       assert_equal "lassie", emp_nodes.last.xpath('node').first['name']
+
+      # Keys that start with an underscore are to be turned into so-named elems
+      assert_empty emp_nodes.first.xpath('datum').select{|datum|
+        datum['name'] =~ /foo/i
+      }
+      assert_equal "bar", emp_nodes.first.xpath('foo').first.content
     end
 
     it "can convert to a flattened Ruport table" do

@@ -82,8 +82,12 @@ module Mochigome
       end
       node.add_child(Nokogiri::XML::Comment.new(doc, @comment)) if @comment
       each do |key, value|
-        sub_node = Nokogiri::XML::Node.new("datum", doc)
-        sub_node["name"] = key.to_s.titleize
+        if key.to_s.start_with?("_")
+          sub_node = Nokogiri::XML::Node.new(key.to_s.sub("_", ""), doc)
+        else
+          sub_node = Nokogiri::XML::Node.new("datum", doc)
+          sub_node["name"] = key.to_s.titleize
+        end
         sub_node.content = value
         node.add_child(sub_node)
       end
@@ -95,7 +99,9 @@ module Mochigome
 
     # TODO: Should handle trickier situations involving datanodes not having various columns
     def flat_column_names
-      colnames = (["name"] + keys).map {|key| "#{@type_name}::#{key}"}
+      colnames = (["name"] + keys).
+        reject{|key| key.to_s.start_with?("_")}.
+        map{|key| "#{@type_name}::#{key}"}
       choices = @children.map(&:flat_column_names)
       colnames += choices.max_by(&:size) || []
       colnames
@@ -103,7 +109,8 @@ module Mochigome
 
     # TODO: Should handle trickier situations involving datanodes not having various columns
     def append_rows_to(table, pad, stack = [])
-      stack.push([@name] + values)
+      row_vals = keys.reject{|k| k.to_s.start_with?("_")}.map{|k| self[k]}
+      stack.push([@name] + row_vals)
       if @children.size > 0
         @children.each {|child| child.send(:append_rows_to, table, pad, stack)}
       else
