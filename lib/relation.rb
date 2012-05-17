@@ -86,7 +86,7 @@ module Mochigome
     end
 
     def select_expr(e)
-      @model_graph.expr_models(e).each{|m| join_to_model(m)}
+      join_to_expr_models(e)
       @rel = @rel.project(e)
     end
 
@@ -103,7 +103,7 @@ module Mochigome
         end
       end
 
-      @model_graph.expr_models(cond).each{|m| join_to_model(m)}
+      join_to_expr_models(cond)
       @rel = @rel.where(cond)
     end
 
@@ -127,11 +127,15 @@ module Mochigome
     def add_join_link(src, tgt)
       raise QueryError.new("Can't join from #{src}, not available") unless
         @models.include?(src)
-      @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(
-        @model_graph.edge_condition(src, tgt)
-      )
       @models.add tgt
+      cond = @model_graph.edge_condition(src, tgt)
+      join_to_expr_models(cond)
+      @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(cond)
       @joins << [src, tgt]
+    end
+
+    def join_to_expr_models(expr)
+      @model_graph.expr_models(expr).each{|m| join_to_model(m)}
     end
   end
 end
