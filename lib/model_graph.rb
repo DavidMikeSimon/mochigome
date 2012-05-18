@@ -98,8 +98,14 @@ module Mochigome
           @table_to_model[model.table_name] = model
         end
 
+        ignore_assocs = []
+        if model.acts_as_mochigome_focus?
+          ignore_assocs = model.mochigome_focus_settings.options[:ignore_assocs]
+        end
+
         model.reflections.
         reject{|name, assoc| assoc.through_reflection}.
+        reject{|name, assoc| ignore_assocs.include? name}.
         each do |name, assoc|
           # TODO: What about self associations?
           # TODO: What about associations to the same model on different keys?
@@ -129,6 +135,12 @@ module Mochigome
       end
 
       added_models.each do |model|
+        # FIXME: Un-DRY, this is a C&P from above
+        ignore_assocs = []
+        if model.acts_as_mochigome_focus?
+          ignore_assocs = model.mochigome_focus_settings.options[:ignore_assocs]
+        end
+
         next unless @assoc_graph.has_vertex?(model)
         path_tree = @assoc_graph.bfs_search_tree_from(model).reverse
         path_tree.depth_first_search do |tgt_model|
@@ -143,6 +155,7 @@ module Mochigome
         # Use through reflections as a hint for preferred indirect paths
         model.reflections.
         select{|name, assoc| assoc.through_reflection}.
+        reject{|name, assoc| ignore_assocs.include? name}.
         each do |name, assoc|
           begin
             foreign_model = assoc.klass

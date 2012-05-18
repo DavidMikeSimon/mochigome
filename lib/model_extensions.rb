@@ -157,6 +157,7 @@ module Mochigome
       @options[:fields] = []
       @options[:custom_subgroup_exprs] = {}
       @options[:custom_assocs] = {}
+      @options[:ignore_assocs] = Set.new
     end
 
     def type_name(n)
@@ -204,6 +205,11 @@ module Mochigome
 
     def custom_association(tgt_cls, expr)
       @options[:custom_assocs][tgt_cls] = expr
+    end
+
+    # TODO: Unit test for this feature
+    def ignore_assoc(name)
+      @options[:ignore_assocs].add name.to_sym
     end
   end
 
