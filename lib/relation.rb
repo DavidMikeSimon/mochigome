@@ -43,7 +43,7 @@ module Mochigome
 
       # Route to it in as few steps as possible, closer to spine end if tie.
       best_path = nil
-      (@spine.reverse + (@models.to_a - @spine)).each do |link_model|
+      (@spine.reverse + (@models.to_a - @spine).sort{|a,b| a.name <=> b.name}).each do |link_model|
         path = @model_graph.path_thru([link_model, model])
         if path && (best_path.nil? || path.size < best_path.size)
           best_path = path
