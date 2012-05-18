@@ -8,6 +8,7 @@ module Mochigome
       @model_graph = ModelGraph.new
       @spine_layers = layers
       @models = Set.new
+      @model_join_stack = []
       @spine = []
       @joins = []
 
@@ -127,15 +128,24 @@ module Mochigome
     def add_join_link(src, tgt)
       raise QueryError.new("Can't join from #{src}, not available") unless
         @models.include?(src)
-      @models.add tgt
-      cond = @model_graph.edge_condition(src, tgt)
-      join_to_expr_models(cond)
-      @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(cond)
+
+      @model_join_stack.push tgt
+      begin
+        cond = @model_graph.edge_condition(src, tgt)
+        join_to_expr_models(cond)
+        @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(cond)
+      ensure
+        @model_join_stack.pop
+      end
+
       @joins << [src, tgt]
+      @models.add tgt
     end
 
     def join_to_expr_models(expr)
-      @model_graph.expr_models(expr).each{|m| join_to_model(m)}
+      @model_graph.expr_models(expr).each do |m|
+        join_to_model(m) unless @model_join_stack.include?(m)
+      end
     end
   end
 end
