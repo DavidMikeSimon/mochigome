@@ -106,6 +106,7 @@ module Mochigome
         model.reflections.
         reject{|name, assoc| assoc.through_reflection}.
         reject{|name, assoc| ignore_assocs.include? name}.
+        to_a.sort{|a,b| a.first.to_s <=> b.first.to_s}.
         each do |name, assoc|
           # TODO: What about self associations?
           # TODO: What about associations to the same model on different keys?
@@ -123,6 +124,7 @@ module Mochigome
 
         if model.acts_as_mochigome_focus?
           model.mochigome_focus_settings.options[:custom_assocs].each do |t,e|
+            next if ignore_assocs.include?(t.to_s.to_sym)
             cond = e.call(model.arel_table, t.arel_table)
             [[model, t], [t, model]]. each do |edge|
               @assoc_graph.add_edge(*edge)
@@ -156,6 +158,7 @@ module Mochigome
         model.reflections.
         select{|name, assoc| assoc.through_reflection}.
         reject{|name, assoc| ignore_assocs.include? name}.
+        to_a.sort{|a,b| a.first.to_s <=> b.first.to_s}.
         each do |name, assoc|
           begin
             foreign_model = assoc.klass

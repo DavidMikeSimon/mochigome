@@ -155,8 +155,8 @@ module Mochigome
       @model = model
       @options = {}
       @options[:fields] = []
-      @options[:custom_subgroup_exprs] = {}
-      @options[:custom_assocs] = {}
+      @options[:custom_subgroup_exprs] = ActiveSupport::OrderedHash.new
+      @options[:custom_assocs] = ActiveSupport::OrderedHash.new
       @options[:ignore_assocs] = Set.new
     end
 
