@@ -60,6 +60,7 @@ module Mochigome
       @models.reject{|n| best_path.include?(n)}.each do |n|
         cond = @model_graph.edge_condition(n, model)
         if cond
+          join_to_expr_models(cond)
           @rel = @rel.where(cond)
         end
       end
