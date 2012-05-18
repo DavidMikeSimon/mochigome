@@ -1,5 +1,6 @@
 require 'mochigome_ver'
 require 'exceptions'
+require 'ordered_set'
 require 'model_extensions'
 require 'model_graph'
 require 'data_node'

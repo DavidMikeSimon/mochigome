@@ -10,8 +10,8 @@ module Mochigome
     def initialize
       @graphed_models = Set.new
       @table_to_model = {}
-      @assoc_graph = RGL::DirectedAdjacencyGraph.new
-      # TODO Also need to do this with hashes used internally in traversal
+      @assoc_graph = RGL::DirectedAdjacencyGraph.new(OrderedSet)
+      # TODO Also maybe need to do this with hashes used internally in traversal
       @assoc_graph.instance_variable_set( # Make path choice more predictable
         :@vertice_dict,
         ActiveSupport::OrderedHash.new
