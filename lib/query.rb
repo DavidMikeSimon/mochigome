@@ -15,7 +15,7 @@ module Mochigome
       @ids_rel = Relation.new(@layer_types)
       @ids_rel.apply_access_filter_func(@access_filter)
 
-      @aggregate_rels = {}
+      @aggregate_rels = ActiveSupport::OrderedHash.new
       aggregate_sources.each do |a|
         focus_model, data_model = case a
           when Array then [a.first, a.second]
@@ -35,7 +35,7 @@ module Mochigome
           agg_rel.select_expr(d_expr.as("d%03u" % i))
         end
 
-        @aggregate_rels[focus_model] ||= {}
+        @aggregate_rels[focus_model] ||= ActiveSupport::OrderedHash.new
         @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
           lambda {|cond|
             data_rel = agg_rel.clone
