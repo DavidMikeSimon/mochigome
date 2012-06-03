@@ -23,9 +23,8 @@ module Mochigome
     end
 
     def human_name
-      # Get rid of duplicate words
-      words = "#{@model.human_name} #{@attr.to_s.humanize}".split
-      words.uniq.join(" ")
+      # Get rid of duplicate words (i.e. School$school_type)
+      "#{@model.human_name} #{@attr.to_s.humanize}".split.map(&:downcase).uniq.join(" ")
     end
 
     def real_model?
