@@ -96,6 +96,9 @@ module Mochigome
   # for this kind of stuff and also put the standard aggregation functions
   # in there?
 
+  # FIXME All this lambda{|t| stuff is just needlessly confusing for
+  # the little good that it accomplishes.
+
   def self.null_unless(pred, value_func)
     case_expr(
       lambda {|t| pred.call(value_func.call(t))},
@@ -110,6 +113,19 @@ module Mochigome
         "(CASE WHEN #{arel_exprify(table_pred, t)} " +
         "THEN #{arel_exprify(then_val, t)} " +
         "ELSE #{arel_exprify(else_val, t)} END)"
+      )
+    }
+  end
+
+  def self.multi_case_expr(cond_results, else_val = nil)
+    lambda {|t|
+      Arel::Nodes::SqlLiteral.new(
+        "(CASE " +
+        cond_results.map{|cond, result|
+          "WHEN #{arel_exprify(cond, t)} THEN #{arel_exprify(result, t)}"
+        } +
+        (else_val ? "ELSE #{arel_exprify(else_val, t)}" : "") +
+        "END)"
       )
     }
   end
