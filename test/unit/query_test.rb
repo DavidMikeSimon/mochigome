@@ -260,7 +260,7 @@ describe Mochigome::Query do
     # Store X, Product C
     assert_equal "Product C", (data_node/0/0/1).name
     assert_equal 3, (data_node/0/0/1)['Sales count']
-    assert_equal (3*@product_c.price).to_s, (data_node/0/0/1)['Gross'].to_s
+    assert_equal (3*@product_c.price).to_f.to_s, (data_node/0/0/1)['Gross'].to_f.to_s
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/1/0).name
     assert_equal 2, (data_node/1/1/0)['Sales count']
@@ -272,7 +272,7 @@ describe Mochigome::Query do
     # Store Z, Product C
     assert_equal "Product C", (data_node/1/0/0).name
     assert_equal 2, (data_node/1/0/0)['Sales count']
-    assert_equal (2*@product_c.price).to_s, (data_node/1/0/0)['Gross'].to_s
+    assert_equal (2*@product_c.price).to_f.to_s, (data_node/1/0/0)['Gross'].to_f.to_s
   end
 
   it "collects aggregate data in subgroups" do
@@ -382,8 +382,8 @@ describe Mochigome::Query do
     data_node = q.run()
     assert_equal "John's Store", (data_node/0/0).name
     assert_equal 8, (data_node/0/0)['Sales count']
-    assert_equal (5*@product_a.price + 3*@product_c.price).to_s,
-      (data_node/0/0)['Gross'].to_s
+    assert_equal (5*@product_a.price + 3*@product_c.price).to_f.to_s,
+      (data_node/0/0)['Gross'].to_f.to_s
   end
 
   it "can do conditional counts" do
