@@ -21,6 +21,7 @@ FactoryGirl.define do
     birth_date { 30.years.ago }
     phone_number "800-555-1212"
     email_address { "#{first_name}.#{last_name}@example.com".downcase }
+    is_awesome false
   end
 
   factory :store_product do

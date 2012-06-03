@@ -24,6 +24,7 @@ class CreateTables < ActiveRecord::Migration
       t.date :birth_date
       t.string :phone_number
       t.string :email_address
+      t.boolean :is_awesome
       t.timestamps
     end
 

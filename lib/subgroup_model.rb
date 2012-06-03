@@ -10,8 +10,13 @@ module Mochigome
       @attr = attr
       if @model.mochigome_focus_settings
         s = @model.mochigome_focus_settings
-        # @attr_expr will just be nil if there's no custom subgroup expr here
-        @attr_expr = s.options[:custom_subgroup_exprs][attr]
+        if s.options[:custom_subgroup_exprs][attr]
+          @attr_expr = s.options[:custom_subgroup_exprs][attr]
+        elsif @model.columns_hash[@attr.to_s].try(:type) == :boolean
+          @attr_expr = Mochigome::sql_bool_to_string(model.arel_table[@attr]).call(model.arel_table)
+        else
+          @attr_expr = nil
+        end
       end
       @focus_settings = Mochigome::ReportFocusSettings.new(@model)
       @focus_settings.type_name "#{@model.human_name} #{@attr.to_s.humanize}"

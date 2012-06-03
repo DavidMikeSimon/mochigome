@@ -15,7 +15,8 @@ describe Mochigome::Query do
     @john = create(:owner, :first_name => "John", :last_name => "Smith")
     @store_x = create(:store, :name => "John's Store", :owner => @john)
 
-    @jane = create(:owner, :first_name => "Jane", :last_name => "Doe")
+    @jane = create(:owner, :first_name => "Jane", :last_name => "Doe",
+                  :is_awesome => true)
     @store_y = create(:store, :name => "Jane's Store (North)", :owner => @jane)
     @store_z = create(:store, :name => "Jane's Store (South)", :owner => @jane)
 
@@ -178,6 +179,18 @@ describe Mochigome::Query do
     assert_equal "John Smith", (data_node/1/0).name
     assert_equal "John's Store", (data_node/1/0/0).name
     assert_equal "Product A", (data_node/1/0/0/0).name
+  end
+
+  it "can subgroup layers by boolean attributes" do
+    q = Mochigome::Query.new(
+      [Mochigome::SubgroupModel.new(Owner, :is_awesome), Owner, Store, Product]
+    )
+    data_node = q.run
+    assert_equal "False", (data_node/0).name
+    assert_equal "John Smith", (data_node/0/0).name
+    assert_equal "John's Store", (data_node/0/0/0).name
+    assert_equal "Product A", (data_node/0/0/0/0).name
+    assert_equal "True", (data_node/1).name
   end
 
   it "can subgroup layers by attributes without including layer model" do

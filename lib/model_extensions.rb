@@ -130,6 +130,15 @@ module Mochigome
     }
   end
 
+  def self.sql_bool_to_string(attr)
+    case_expr(
+      Arel::Nodes::NamedFunction.new('lower', [attr]).
+        in(["true", "t", 1, "1", "y", "yes"]),
+      "True",
+      "False"
+    )
+  end
+
   private
 
   def self.arel_exprify(e, t = nil)
