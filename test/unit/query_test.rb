@@ -186,11 +186,11 @@ describe Mochigome::Query do
       [Mochigome::SubgroupModel.new(Owner, :is_awesome), Owner, Store, Product]
     )
     data_node = q.run
-    assert_equal "False", (data_node/0).name
+    assert_equal "Owner Is Awesome: No", (data_node/0).name
     assert_equal "John Smith", (data_node/0/0).name
     assert_equal "John's Store", (data_node/0/0/0).name
     assert_equal "Product A", (data_node/0/0/0/0).name
-    assert_equal "True", (data_node/1).name
+    assert_equal "Owner Is Awesome: Yes", (data_node/1).name
   end
 
   it "can subgroup layers by attributes without including layer model" do

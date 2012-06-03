@@ -12,7 +12,9 @@ module Mochigome
       if s && s.options[:custom_subgroup_exprs][attr]
         @attr_expr = s.options[:custom_subgroup_exprs][attr]
       elsif @model.columns_hash[@attr.to_s].try(:type) == :boolean
-        @attr_expr = Mochigome::sql_bool_to_string(model.arel_table[@attr]).call(model.arel_table)
+        @attr_expr = Mochigome::sql_bool_to_string(
+          model.arel_table[@attr], "#{human_name.titleize}: "
+        ).call(model.arel_table)
       else
         @attr_expr = nil
       end
