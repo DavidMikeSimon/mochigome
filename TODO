@@ -7,3 +7,4 @@
 - Automatically set default to 0 on sum and count aggregation
 - Treat through-associations as hints for preferred paths
 - Better handling of nil in subgroup fields
+- Handle has_and_belongs_to_many correctly
