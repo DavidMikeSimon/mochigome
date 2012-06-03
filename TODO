@@ -6,3 +6,4 @@
 - Some kind of single-page preview on the edit screen would be cool. Maybe use FOP with fake data and the PNG output option?
 - Automatically set default to 0 on sum and count aggregation
 - Treat through-associations as hints for preferred paths
+- Better handling of nil in subgroup fields
