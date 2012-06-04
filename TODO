@@ -5,6 +5,6 @@
 - Named subsets of different fields and agg fields on a single model
 - Some kind of single-page preview on the edit screen would be cool. Maybe use FOP with fake data and the PNG output option?
 - Automatically set default to 0 on sum and count aggregation
-- Treat through-associations as hints for preferred paths
 - Better handling of nil in subgroup fields
 - Handle has_and_belongs_to_many correctly
+- Deal with ignore_assoc properly in both directions and when we see :through assocs
