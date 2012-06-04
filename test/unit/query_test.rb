@@ -275,6 +275,15 @@ describe Mochigome::Query do
     assert_equal (2*@product_c.price).to_f.to_s, (data_node/1/0/0)['Gross'].to_f.to_s
   end
 
+  it "can use a named aggregate data setting" do
+    q = Mochigome::Query.new(
+      [Owner],
+      :aggregate_sources => [[Product, :averaging]]
+    )
+    data_node = q.run
+    assert_equal ((19.95*4 + 5)/5).to_f.to_s, data_node['Products average price'].to_f.to_s
+  end
+
   it "collects aggregate data in subgroups" do
     q = Mochigome::Query.new(
       [Mochigome::SubgroupModel.new(Owner, :last_name), Owner, Store, Product],

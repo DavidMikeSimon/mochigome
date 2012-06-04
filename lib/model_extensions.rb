@@ -6,9 +6,9 @@ module Mochigome
       base.write_inheritable_attribute :mochigome_focus_settings, nil
       base.class_inheritable_reader :mochigome_focus_settings
 
-      # TODO: Use an ordered hash for this
-      base.write_inheritable_attribute :mochigome_aggregation_settings, nil
-      base.class_inheritable_reader :mochigome_aggregation_settings
+      # FIXME: Unclear on how this interacts with inheritance...
+      base.write_inheritable_attribute :mochigome_aggregation_settings_sets, {}
+      base.class_inheritable_reader :mochigome_aggregation_settings_sets
     end
 
     module ClassMethods
@@ -45,13 +45,18 @@ module Mochigome
 
       # TODO: Split out aggregation stuff into its own module
 
-      def has_mochigome_aggregations
-        if self.try(:mochigome_aggregation_settings).try(:model) == self
-          raise Mochigome::ModelSetupError.new("Already aggregation settings for #{self.name}")
+      def has_mochigome_aggregations(name = :default)
+        name = name.to_sym
+        if mochigome_aggregation_settings_sets[name].try(:model) == self
+          raise Mochigome::ModelSetupError.new("Can't overwrite aggregation settings for #{self.name}")
         end
         settings = AggregationSettings.new(self)
         yield settings if block_given?
-        write_inheritable_attribute :mochigome_aggregation_settings, settings
+        mochigome_aggregation_settings_sets[name] = settings
+      end
+
+      def mochigome_aggregation_settings(name = :default)
+        mochigome_aggregation_settings_sets[name]
       end
 
       def assoc_condition(name)

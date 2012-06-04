@@ -9,6 +9,7 @@ class Product < ActiveRecord::Base
         "Consonant"
       ).call(Product.arel_table)
   end
+
   has_mochigome_aggregations do |a|
     a.fields [
       :sum_price,
@@ -22,6 +23,10 @@ class Product < ActiveRecord::Base
     ]
     a.hidden_fields [ {"Secret count" => [:count]} ]
     a.fields_in_ruby [ {"Count squared" => lambda{|row| row["Secret count"].try(:**, 2)}} ]
+  end
+
+  has_mochigome_aggregations(:averaging) do |a|
+    a.fields [:average_price]
   end
 
   belongs_to :category

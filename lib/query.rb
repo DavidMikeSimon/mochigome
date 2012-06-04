@@ -17,9 +17,14 @@ module Mochigome
 
       @aggregate_rels = ActiveSupport::OrderedHash.new
       aggregate_sources.each do |a|
-        focus_model, data_model = case a
-          when Array then [a.first, a.second]
-          else [a, a]
+        focus_model, data_model, agg_setting_name = nil, nil, nil
+        if a.is_a?(Array) then
+          focus_model = a.select{|e| e.is_a?(Class)}.first
+          data_model = a.select{|e| e.is_a?(Class)}.last
+          agg_setting_name = a.select{|e| e.is_a?(Symbol)}.first || :default
+        else
+          focus_model = data_model = a
+          agg_setting_name = :default
         end
 
         agg_rel = Relation.new(@layer_types)
@@ -28,15 +33,21 @@ module Mochigome
 
         key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
 
-        agg_fields = data_model.mochigome_aggregation_settings.
+        agg_fields = data_model.
+          mochigome_aggregation_settings(agg_setting_name).
           options[:fields].reject{|a| a[:in_ruby]}
         agg_fields.each_with_index do |a, i|
           d_expr = a[:value_proc].call(data_model.arel_table)
           agg_rel.select_expr(d_expr.as("d%03u" % i))
         end
 
-        @aggregate_rels[focus_model] ||= ActiveSupport::OrderedHash.new
-        @aggregate_rels[focus_model][data_model] = (0..key_cols.length).map{|n|
+        agg_rel_key = {
+          :focus_model => focus_model,
+          :data_model => data_model,
+          :agg_setting_name => agg_setting_name
+        }
+
+        @aggregate_rels[agg_rel_key] = (0..key_cols.length).map{|n|
           lambda {|cond|
             data_rel = agg_rel.clone
             data_rel.apply_condition(cond)
@@ -134,55 +145,53 @@ module Mochigome
     end
 
     def load_aggregate_data(node, cond)
-      @aggregate_rels.each do |focus_model, data_model_rels|
-        # TODO Actually get the key types found in init for this aggregation
-        super_types = @layer_types.take_while{|m| m != focus_model}
-        data_model_rels.each do |data_model, rel_funcs|
-          aggs = data_model.mochigome_aggregation_settings.options[:fields]
-          aggs_count = aggs.reject{|a| a[:in_ruby]}.size
-          rel_funcs.each do |rel_func|
-            q = rel_func.call(cond)
-            data_tree = {}
-            @layer_types.first.connection.select_all(q.to_sql).each do |row|
-              group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
-              data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
-              if group_values.empty?
-                data_tree = data_values
-              else
-                c = data_tree
-                group_values.take(group_values.size-1).each do |group_id|
-                  c = (c[group_id] ||= {})
-                end
-                c[group_values.last] = data_values
+      @aggregate_rels.each do |key, rel_funcs|
+        data_model = key[:data_model]
+        agg_name = key[:agg_setting_name]
+        agg_settings = data_model.mochigome_aggregation_settings(agg_name)
+
+        rel_funcs.each do |rel_func|
+          q = rel_func.call(cond)
+          data_tree = {}
+          @layer_types.first.connection.select_all(q.to_sql).each do |row|
+            group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
+            data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
+            if group_values.empty?
+              data_tree = data_values
+            else
+              c = data_tree
+              group_values.take(group_values.size-1).each do |group_id|
+                c = (c[group_id] ||= {})
               end
+              c[group_values.last] = data_values
             end
-            insert_aggregate_data_fields(node, data_tree, data_model)
           end
+          insert_aggregate_data_fields(node, data_tree, agg_settings)
         end
       end
     end
 
-    def insert_aggregate_data_fields(node, table, data_model)
+    def insert_aggregate_data_fields(node, table, agg_settings)
       if table.is_a? Array
-        fields = data_model.mochigome_aggregation_settings.options[:fields]
+        fields = agg_settings.options[:fields]
         # Pre-fill the node with all fields in the right order
-        fields.each{|agg| node[agg[:name]] = agg[:default] unless agg[:hidden] }
-        agg_row = {} # Hold regular aggs here to be used in ruby-based aggs
-        fields.reject{|agg| agg[:in_ruby]}.zip(table).each do |agg, v|
-          v ||= agg[:default]
-          agg_row[agg[:name]] = v
-          node[agg[:name]] = v unless agg[:hidden]
+        fields.each{|fld| node[fld[:name]] = fld[:default] unless fld[:hidden] }
+        agg_row = {} # Hold regular results here to be used in ruby-based fields
+        fields.reject{|fld| fld[:in_ruby]}.zip(table).each do |fld, v|
+          v ||= fld[:default]
+          agg_row[fld[:name]] = v
+          node[fld[:name]] = v unless fld[:hidden]
         end
-        fields.select{|agg| agg[:in_ruby]}.each do |agg|
-          node[agg[:name]] = agg[:ruby_proc].call(agg_row)
+        fields.select{|fld| fld[:in_ruby]}.each do |fld|
+          node[fld[:name]] = fld[:ruby_proc].call(agg_row)
         end
         node.children.each do |c|
-          insert_aggregate_data_fields(c, [], data_model)
+          insert_aggregate_data_fields(c, [], agg_settings)
         end
       else
         node.children.each do |c|
           subtable = table[c[:id]] || []
-          insert_aggregate_data_fields(c, subtable, data_model)
+          insert_aggregate_data_fields(c, subtable, agg_settings)
         end
       end
     end
