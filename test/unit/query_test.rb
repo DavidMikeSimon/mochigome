@@ -275,7 +275,7 @@ describe Mochigome::Query do
     assert_equal (2*@product_c.price).to_f.to_s, (data_node/1/0/0)['Gross'].to_f.to_s
   end
 
-  it "can collect aggregate data without any groups" do
+  it "can collect aggregate data without any layers" do
     q = Mochigome::Query.new(
       [],
       :aggregate_sources => [Product]
