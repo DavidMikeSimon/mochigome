@@ -86,6 +86,10 @@ module Mochigome
 
     private
 
+    def connection
+      ActiveRecord::Base.connection
+    end
+
     def create_node_tree(cond)
       root = DataNode.new(:report, @name)
       root.comment = <<-eos
@@ -100,8 +104,11 @@ module Mochigome
 
       r = @ids_rel.clone
       r.apply_condition(cond)
-      ids_table = @layer_types.first.connection.select_all(r.to_sql)
-      fill_layers(ids_table, {[] => root}, @layer_types)
+      ids_sql = r.to_sql
+      if ids_sql
+        ids_table = connection.select_all(ids_sql)
+        fill_layers(ids_table, {[] => root}, @layer_types)
+      end
 
       root
     end
@@ -153,7 +160,7 @@ module Mochigome
         rel_funcs.each do |rel_func|
           q = rel_func.call(cond)
           data_tree = {}
-          @layer_types.first.connection.select_all(q.to_sql).each do |row|
+          connection.select_all(q.to_sql).each do |row|
             group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
             data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
             if group_values.empty?

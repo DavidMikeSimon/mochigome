@@ -275,6 +275,18 @@ describe Mochigome::Query do
     assert_equal (2*@product_c.price).to_f.to_s, (data_node/1/0/0)['Gross'].to_f.to_s
   end
 
+  it "can collect aggregate data without any groups" do
+    q = Mochigome::Query.new(
+      [],
+      :aggregate_sources => [Product]
+    )
+
+    data_node = q.run
+    assert_equal Product.all.map(&:price).sum.to_s,
+      data_node["Products sum price"].to_s
+    assert_empty data_node.children
+  end
+
   it "can use a named aggregate data setting" do
     q = Mochigome::Query.new(
       [Owner],

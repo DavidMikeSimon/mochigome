@@ -13,34 +13,34 @@ module Mochigome
       @joins = []
 
       @spine_layers.map(&:to_real_model).uniq.each do |m|
-        if @rel
-          join_to_model(m)
-        else
-          @rel = @model_graph.relation_init(m)
-          @models.add m
-        end
+        join_to_model(m)
         @spine << m
       end
       @spine_layers.each{|m| select_model_id(m)}
     end
 
     def to_arel
-      @rel.clone
+      @rel.try(:clone)
     end
 
     def to_sql
-      @rel.to_sql
+      @rel.try(:to_sql)
     end
 
     def clone
       c = super
       c.instance_variable_set :@models, @models.clone
-      c.instance_variable_set :@rel, @rel.clone
+      c.instance_variable_set :@rel, @rel.clone if @rel
       c
     end
 
     def join_to_model(model)
       return if @models.include?(model)
+      unless @rel
+        @rel = @model_graph.relation_init(model)
+        @models.add model
+        return
+      end
 
       # Route to it in as few steps as possible, closer to spine end if tie.
       best_path = nil
@@ -84,6 +84,7 @@ module Mochigome
     end
 
     def select_model_id(m)
+      join_to_model(m)
       @rel = @rel.project(m.arel_primary_key.as("#{m.name}_id"))
     end
 
