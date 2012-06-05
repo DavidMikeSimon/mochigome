@@ -8,3 +8,5 @@
 - Better handling of nil in subgroup fields
 - Handle has_and_belongs_to_many correctly
 - Deal with ignore_assoc properly in both directions and when we see :through assocs
+- Refuse to do huge reports (ids_table more than a few thousand rows) beacuse user probably just screwed up the grouping
+- Allow row counts that skip layers (i.e. a school count report on School$region, SchoolDetail$comp_shelter should have a top-level box that summarizes the # of schools that do and do not have competency shelters)
