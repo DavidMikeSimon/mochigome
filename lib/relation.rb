@@ -59,7 +59,7 @@ module Mochigome
       @models.reject{|n| best_path.include?(n)}.each do |n|
         extra_path = @model_graph.path_thru([n, model])
         if extra_path && extra_path.size <= best_path.size
-          join_on_path(extra_path)
+          join_on_path(extra_path, :force_condition => true)
         end
       end
     end
@@ -73,11 +73,17 @@ module Mochigome
       end
     end
 
-    def join_on_path(path)
+    def join_on_path(path, options = {})
       path = path.map(&:to_real_model).uniq
       join_to_model path.first
       (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
-        add_join_link(src, tgt) unless @models.include?(tgt)
+        if @models.include?(tgt)
+          if options[:force_condition]
+            apply_condition(@model_graph.edge_condition(src, tgt))
+          end
+        else
+          add_join_link(src, tgt)
+        end
       end
     end
 
