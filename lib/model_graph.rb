@@ -110,7 +110,7 @@ module Mochigome
 
         model.reflections.
         reject{|name, assoc| assoc.through_reflection}.
-        reject{|name, assoc| ignore_assocs.include? name}.
+        reject{|name, assoc| ignore_assocs.include? name.to_sym}.
         to_a.sort{|a,b| a.first.to_s <=> b.first.to_s}.
         each do |name, assoc|
           # TODO: What about self associations?
@@ -162,7 +162,8 @@ module Mochigome
         # Use through reflections as a hint for preferred indirect paths
         model.reflections.
         select{|name, assoc| assoc.through_reflection}.
-        reject{|name, assoc| ignore_assocs.include? name}.
+        reject{|name, assoc| ignore_assocs.include? name.to_sym}.
+        reject{|name, assoc| ignore_assocs.include? assoc.through_reflection.name.to_sym}.
         to_a.sort{|a,b| a.first.to_s <=> b.first.to_s}.
         each do |name, assoc|
           begin
