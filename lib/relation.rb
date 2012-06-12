@@ -54,14 +54,12 @@ module Mochigome
       raise QueryError.new("No path to #{model}") unless best_path
       join_on_path(best_path)
 
-      # Also use the conditions of any other direct assoc to the target
-      # TODO: Or maybe any other assoc that's equal length?
+      # Also use the conditions of any other path that's at least that short
       # TODO: Write a test that requires the below code to work
       @models.reject{|n| best_path.include?(n)}.each do |n|
-        cond = @model_graph.edge_condition(n, model)
-        if cond
-          join_to_expr_models(cond)
-          @rel = @rel.where(cond)
+        extra_path = @model_graph.path_thru([n, model])
+        if extra_path && extra_path.size <= best_path.size
+          join_on_path(extra_path)
         end
       end
     end
