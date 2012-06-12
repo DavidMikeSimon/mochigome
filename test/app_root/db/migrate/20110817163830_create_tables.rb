@@ -2,7 +2,7 @@ class CreateTables < ActiveRecord::Migration
   def self.up
     create_table :products do |t|
       t.string :name
-      t.decimal :price
+      t.decimal :price, :precision => 10, :scale => 2
       t.integer :category_id
       t.timestamps
     end

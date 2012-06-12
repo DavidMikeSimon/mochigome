@@ -282,8 +282,8 @@ describe Mochigome::Query do
     )
 
     data_node = q.run
-    assert_equal Product.all.map(&:price).sum.to_s,
-      data_node["Products sum price"].to_s
+    assert_equal Product.all.map(&:price).sum.to_f.to_s,
+      data_node["Products sum price"].to_f.to_s
     assert_empty data_node.children
   end
 
