@@ -90,6 +90,11 @@ module Mochigome
       ActiveRecord::Base.connection
     end
 
+    # TODO: Write a test for situations that use this
+    def denilify(v)
+      (v.nil? || v.to_s.strip.empty?) ? "(None)" : v
+    end
+
     def create_node_tree(cond)
       root = DataNode.new(:report, @name)
       root.comment = <<-eos
@@ -106,7 +111,11 @@ module Mochigome
       r.apply_condition(cond)
       ids_sql = r.to_sql
       if ids_sql
-        ids_table = connection.select_all(ids_sql)
+        ids_table = connection.select_all(ids_sql).map do |row|
+          row.each do |k,v|
+            row[k] = denilify(v)
+          end
+        end
         fill_layers(ids_table, {[] => root}, @layer_types)
       end
 
@@ -161,7 +170,7 @@ module Mochigome
           q = rel_func.call(cond)
           data_tree = {}
           connection.select_all(q.to_sql).each do |row|
-            group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| row[k]}
+            group_values = row.keys.select{|k| k.start_with?("g")}.sort.map{|k| denilify(row[k])}
             data_values = row.keys.select{|k| k.start_with?("d")}.sort.map{|k| row[k]}
             if group_values.empty?
               data_tree = data_values
