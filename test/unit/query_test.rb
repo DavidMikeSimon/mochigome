@@ -287,6 +287,18 @@ describe Mochigome::Query do
     assert_empty data_node.children
   end
 
+  it "can collect filtered aggregate data without any layers" do
+    q = Mochigome::Query.new(
+      [],
+      :aggregate_sources => [Product]
+    )
+
+    data_node = q.run(@store_x)
+    assert_equal [@product_a, @product_c].map(&:price).sum.to_f.to_s,
+      data_node["Products sum price"].to_f.to_s
+    assert_empty data_node.children
+  end
+
   it "can use a named aggregate data setting" do
     q = Mochigome::Query.new(
       [Owner],

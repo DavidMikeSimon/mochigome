@@ -107,16 +107,18 @@ module Mochigome
       end
       root.comment.gsub!(/(\n|^) +/, "\\1")
 
-      r = @ids_rel.clone
-      r.apply_condition(cond)
-      ids_sql = r.to_sql
-      if ids_sql
-        ids_table = connection.select_all(ids_sql).map do |row|
-          row.each do |k,v|
-            row[k] = denilify(v)
+      unless @layer_types.empty?
+        r = @ids_rel.clone
+        r.apply_condition(cond)
+        ids_sql = r.to_sql
+        if ids_sql
+          ids_table = connection.select_all(ids_sql).map do |row|
+            row.each do |k,v|
+              row[k] = denilify(v)
+            end
           end
+          fill_layers(ids_table, {[] => root}, @layer_types)
         end
-        fill_layers(ids_table, {[] => root}, @layer_types)
       end
 
       root
