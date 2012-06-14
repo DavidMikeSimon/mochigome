@@ -27,8 +27,23 @@ module Mochigome
         r += expr_models(e.send(m)) if e.respond_to?(m)
       end
       if e.respond_to?(:relation)
-        model = @table_to_model[e.relation.name] or
-          raise ModelSetupError.new("Table lookup error: #{e.relation.name}")
+        model = nil
+        begin
+          model = @table_to_model[e.relation.name] or
+            raise ModelSetupError.new("Table lookup error: #{e.relation.name}")
+        rescue ModelSetupError
+          Dir.glob(RAILS_ROOT + '/app/models/*.rb').each do |path|
+            clsname = File.basename(path).sub(/\.rb$/, "").classify
+            require File.expand_path(path) unless Object.const_defined?(clsname)
+          end
+          Object.subclasses_of(ActiveRecord::Base).each do |m|
+            if m.table_name == e.relation.name
+              model = m
+              break
+            end
+          end
+          raise unless model
+        end
         r.add model
       end
       r
