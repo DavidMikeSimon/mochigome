@@ -38,6 +38,7 @@ module Mochigome
           options[:fields].reject{|a| a[:in_ruby]}
         agg_fields.each_with_index do |a, i|
           d_expr = a[:value_proc].call(data_model.arel_table)
+          d_expr = d_expr.expr if d_expr.respond_to?(:expr)
           agg_rel.select_expr(d_expr.as("d%03u" % i))
         end
 

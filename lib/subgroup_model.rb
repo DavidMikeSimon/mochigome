@@ -18,6 +18,9 @@ module Mochigome
       else
         @attr_expr = nil
       end
+      if @attr_expr && @attr_expr.respond_to?(:expr)
+        @attr_expr = @attr_expr.expr
+      end
       @focus_settings = Mochigome::ReportFocusSettings.new(@model)
       @focus_settings.type_name "#{@model.human_name} #{@attr.to_s.humanize}"
       @focus_settings.name lambda{|r| r.send(attr)}
