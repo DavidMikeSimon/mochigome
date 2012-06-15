@@ -128,7 +128,7 @@ module Mochigome
         "(CASE " +
         cond_results.map{|cond, result|
           "WHEN #{arel_exprify(cond, t)} THEN #{arel_exprify(result, t)}"
-        } +
+        }.join(" ") +
         (else_val ? "ELSE #{arel_exprify(else_val, t)}" : "") +
         "END)"
       )
