@@ -59,13 +59,13 @@ module Mochigome
       @models.reject{|n| best_path.include?(n)}.each do |n|
         extra_path = @model_graph.path_thru([n, model])
         if extra_path && extra_path.size <= best_path.size
-          join_on_path(extra_path, :force_condition => true)
+          join_on_path extra_path
         end
       end
     end
 
     def join_on_path_thru(path)
-      full_path = @model_graph.path_thru(path).uniq
+      full_path = @model_graph.path_thru(path)
       if full_path
         join_on_path(full_path)
       else
@@ -74,16 +74,18 @@ module Mochigome
     end
 
     def join_on_path(path, options = {})
-      path = path.map(&:to_real_model).uniq
-      join_to_model path.first
-      (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
-        if @models.include?(tgt)
-          if options[:force_condition]
+      begin
+        path = path.map(&:to_real_model).uniq
+        join_to_model path.first
+        (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
+          if @models.include?(tgt)
             apply_condition(@model_graph.edge_condition(src, tgt))
+          else
+            add_join_link(src, tgt)
           end
-        else
-          add_join_link(src, tgt)
         end
+      rescue QueryError => e
+        raise QueryError.new("Error pathing #{path.map(&:name).inspect}: #{e}")
       end
     end
 
@@ -116,15 +118,19 @@ module Mochigome
 
     def apply_access_filter_func(func)
       @models.each do |m|
-        h = func.call(m)
-        h.delete(:join_paths).try :each do |path|
-          join_on_path path
-        end
-        if h[:condition]
-          apply_condition h.delete(:condition)
-        end
-        unless h.empty?
-          raise QueryError.new("Unknown assoc filter keys #{h.keys.inspect}")
+        begin
+          h = func.call(m)
+          h.delete(:join_paths).try :each do |path|
+            join_on_path_thru path
+          end
+          if h[:condition]
+            apply_condition h.delete(:condition)
+          end
+          unless h.empty?
+            raise QueryError.new("Unknown assoc filter keys #{h.keys.inspect}")
+          end
+        rescue QueryError => e
+          raise QueryError.new("Error checking access to #{m.name}: #{e}")
         end
       end
     end
@@ -137,7 +143,8 @@ module Mochigome
 
       @model_join_stack.push tgt
       begin
-        cond = @model_graph.edge_condition(src, tgt)
+        cond = @model_graph.edge_condition(src, tgt) or
+          raise QueryError.new("No direct link from #{src} to #{tgt}")
         join_to_expr_models(cond)
         @rel = @rel.join(tgt.arel_table, Arel::Nodes::InnerJoin).on(cond)
       ensure
