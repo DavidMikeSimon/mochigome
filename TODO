@@ -11,3 +11,4 @@
 - Refuse to do huge reports (ids_table more than a few thousand rows) beacuse user probably just screwed up the grouping
 - Allow row counts that skip layers (i.e. a school count report on School$region, SchoolDetail$comp_shelter should have a top-level box that summarizes the # of schools that do and do not have competency shelters)
 - Some kind of on-write caching feature for records that would be expensive to fully re-aggregate every time (i.e. AttendanceRecord)
+- Some cancan joins must be allowed to double-back over already-joined tables (i.e. the troublesome SchoolStudent ability)
