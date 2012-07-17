@@ -121,7 +121,10 @@ module Mochigome
         begin
           h = func.call(m)
           h.delete(:join_paths).try :each do |path|
-            join_on_path_thru path
+            # FIXME: Eventually we need to support joins that
+            # double back, if only for CanCan stuff, so get rid of this
+            # uniq junk.
+            join_on_path_thru path.uniq
           end
           if h[:condition]
             apply_condition h.delete(:condition)
