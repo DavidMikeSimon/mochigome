@@ -102,11 +102,12 @@ describe Mochigome::DataNode do
       @datanode.merge! [{:id => 400}, {:apples => 1}, {:box_cutters => 2}, {:can_openers => 3}]
       emp1 = @datanode << Mochigome::DataNode.new(:employee, :alice)
       emp1.merge! [{:id => 500}, {:x => 9}, {:y => 8}, {:z => 7}, {:internal_type => "Cyborg"}, {:_foo => "bar"}]
+      emp1 << Mochigome::DataNode.new(:phone, :android)
       emp2 = @datanode << Mochigome::DataNode.new(:employee, :bob)
       emp2.merge! [{:id => 600}, {:x => 5}, {:y => 4}, {:z => 8734}, {:internal_type => "Human"}]
       emp2 << Mochigome::DataNode.new(:pet, :lassie)
 
-      @titles = [
+      @expected_titles = [
         "corporation::name",
         "corporation::id",
         "corporation::apples",
@@ -118,12 +119,15 @@ describe Mochigome::DataNode do
         "employee::y",
         "employee::z",
         "employee::internal_type",
+        "phone::name",
         "pet::name"
       ]
+      @expected_row_1 = ['acme', 400, 1, 2, 3, 'alice', 500,  9, 8, 7, "Cyborg", "android", nil]
+      @expected_row_2 = ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, "Human", nil, "lassie"]
     end
 
     it "can convert to an XML document with correct attributes and elements" do
-      # Why stringify and reparse? So that we could use another XML generator
+      # Why stringify and reparse? So that implementation could use another XML generator
       doc = Nokogiri::XML(@datanode.to_xml.to_s)
 
       comment = doc.xpath('/node[@type="Corporation"]/comment()').first
@@ -140,9 +144,10 @@ describe Mochigome::DataNode do
       assert_equal "bob", emp_nodes.last['name']
       assert_equal "Cyborg", emp_nodes.first['internal_type']
       assert_equal "4", emp_nodes.last.xpath('datum[@name="Y"]').first.content
+      assert_equal "android", emp_nodes.first.xpath('node').first['name']
       assert_equal "lassie", emp_nodes.last.xpath('node').first['name']
 
-      # Keys that start with an underscore are to be turned into so-named elems
+      # Keys that start with an underscore are to be turned into special elems
       assert_empty emp_nodes.first.xpath('datum').select{|datum|
         datum['name'] =~ /foo/i
       }
@@ -151,16 +156,16 @@ describe Mochigome::DataNode do
 
     it "can convert to a flattened Ruport table" do
       table = @datanode.to_flat_ruport_table
-      assert_equal @titles, table.column_names
-      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500,  9, 8, 7, "Cyborg", nil], table.data[0].to_a
-      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, "Human", "lassie"], table.data[1].to_a
+      assert_equal @expected_titles, table.column_names
+      assert_equal @expected_row_1, table.data[0].to_a
+      assert_equal @expected_row_2, table.data[1].to_a
     end
 
     it "can convert to a flat array of arrays" do
       a = @datanode.to_flat_arrays
-      assert_equal @titles, a[0]
-      assert_equal ['acme', 400, 1, 2, 3, 'alice', 500, 9, 8, 7, "Cyborg", nil], a[1]
-      assert_equal ['acme', 400, 1, 2, 3, 'bob', 600, 5, 4, 8734, "Human", "lassie"], a[2]
+      assert_equal @expected_titles, a[0]
+      assert_equal @expected_row_1, a[1]
+      assert_equal @expected_row_2, a[2]
     end
   end
 end

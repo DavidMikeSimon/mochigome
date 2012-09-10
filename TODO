@@ -2,7 +2,7 @@
 - Replace all the TODOs and FIXMEs with whatever they're asking for (additional checks, use of ordered indifferent hashes instead of arrays of hashes, etc.)
 - If there is more than one association from model A to model B and they're both focusable, pick the one with no conditions. If all the associations have conditions, complain and require that the correct association be manually specified (where "correct" might mean none of them should be valid)
   - Alternately, always ignore conditional associations unless they're specifically provided to Mochigome by the model
-- Named subsets of different fields and agg fields on a single model
+- Named subsets of different fields on a single model
 - Some kind of single-page preview on the edit screen would be cool. Maybe use FOP with fake data and the PNG output option? Slow, tho...
 - Automatically set default to 0 on sum and count aggregation
 - Better handling of nil in subgroup fields
