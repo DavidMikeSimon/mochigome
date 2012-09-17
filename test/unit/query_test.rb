@@ -570,18 +570,6 @@ describe Mochigome::Query do
     refute dn.children.any?{|c| c.name == "Product E"}
   end
 
-  it "access filter joins will not duplicate joins already in the query" do
-    af = proc do |cls|
-      return {} unless cls == Product
-      return {
-        :join_paths => [[Product, StoreProduct, Store]],
-        :condition => Store.arel_table[:name].matches("Jo%")
-      }
-    end
-    q = Mochigome::Query.new([Product, Store], :access_filter => af)
-    assert_equal 1, q.instance_variable_get(:@ids_rel).to_sql.scan(/join .stores./i).size
-  end
-
   it "automatically joins if run given a condition on a new table" do
     q = Mochigome::Query.new([Product, Store])
     dn = q.run(Category.arel_table[:name].eq(@category1.name))

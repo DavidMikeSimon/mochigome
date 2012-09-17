@@ -1,10 +1,109 @@
 module Mochigome
   class Query
+    def initialize(layer_tree, options = {})
+      @lines = []
+      @name = options.delete(:root_name).try(:to_s) || "report"
+      @lines << QueryLine.new(layer_tree, options) # FIXME Not really tree...
+    end
+
+    def run(cond = nil)
+      id_tables = []
+      model_ids = {}
+      parental_seqs = {}
+      @lines.each do |line|
+        tbl = line.build_id_table(cond)
+        id_tables << tbl
+        parent_models = []
+        line.layer_types.each do |model|
+          tbl.each do |ids_row|
+            i = ids_row["#{model.name}_id"]
+            if i
+              (model_ids[model] ||= Set.new).add(i)
+              parental_seq_key = parent_models.zip(
+                parent_models.map{|pm| ids_row["#{pm}_id"]}
+              )
+              (parental_seqs[parental_seq_key] ||= Set.new).add([model.name, i])
+            end
+          end
+          parent_models << model.name
+        end
+      end
+
+      model_datanodes = generate_datanodes(model_ids)
+      root = create_root_node
+      add_datanode_children([], root, model_datanodes, parental_seqs)
+      @lines.each do |line|
+        line.load_aggregate_data(root, cond)
+      end
+      return root
+    end
+
+    private
+
+    def generate_datanodes(model_ids)
+      model_datanodes = {}
+      model_ids.keys.each do |model|
+        # TODO: Find a way to do this without loading all recs at one time
+        model.all(
+          :conditions => {model.primary_key => model_ids[model].to_a},
+          :order => model.mochigome_focus_settings.get_ordering
+        ).each_with_index do |rec, seq_idx|
+          f = rec.mochigome_focus
+          dn = DataNode.new(f.type_name, f.name)
+          dn.merge!(f.field_data)
+          dn[:id] = rec.id
+          dn[:internal_type] = model.name
+          (model_datanodes[model.name] ||= {})[rec.id] = [dn, seq_idx]
+        end
+      end
+      return model_datanodes
+    end
+
+    def add_datanode_children(path, node, model_datanodes, parental_seqs)
+      # TODO: Order by left-to-right class order in Query init tree
+      path_children = parental_seqs[path]
+      return unless path_children
+      ordered_children = {}
+      path_children.each do |model, i|
+        src_dn, seq_idx = model_datanodes[model][i]
+        dn = src_dn.clone
+        add_datanode_children(
+          path + [[model, i]],
+          dn,
+          model_datanodes,
+          parental_seqs
+        )
+        ordered_children[seq_idx] = dn
+      end
+      ordered_children.keys.sort.each do |k|
+        node.children << ordered_children[k]
+      end
+    end
+
+    def create_root_node
+      root = DataNode.new(:report, @name)
+      root.comment = <<-eos
+        Mochigome Version: #{Mochigome::VERSION}
+        Report Generated: #{Time.now}
+      eos
+      #Layers: #{@layer_types.map(&:name).join(" => ")}
+      #@ids_rel.joins.each do |src, tgt|
+      #  root.comment += "Join: #{src.name} -> #{tgt.name}\n"
+      #end
+      root.comment.gsub!(/(\n|^) +/, "\\1")
+      return root
+    end
+  end
+
+  private
+
+  class QueryLine
+    attr_accessor :layer_types
+
     def initialize(layer_types, options = {})
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
 
-      @name = options.delete(:root_name).try(:to_s) || "report"
       @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
       # TODO: Validate that aggregate_sources is in the correct format
       aggregate_sources = options.delete(:aggregate_sources) || []
@@ -79,14 +178,6 @@ module Mochigome
       end
     end
 
-    def run(cond = nil)
-      root = create_node_tree(cond)
-      load_aggregate_data(root, cond)
-      return root
-    end
-
-    private
-
     def connection
       ActiveRecord::Base.connection
     end
@@ -96,71 +187,19 @@ module Mochigome
       (v.nil? || v.to_s.strip.empty?) ? "(None)" : v
     end
 
-    def create_node_tree(cond)
-      root = DataNode.new(:report, @name)
-      root.comment = <<-eos
-        Mochigome Version: #{Mochigome::VERSION}
-        Report Generated: #{Time.now}
-        Layers: #{@layer_types.map(&:name).join(" => ")}
-      eos
-      @ids_rel.joins.each do |src, tgt|
-        root.comment += "Join: #{src.name} -> #{tgt.name}\n"
-      end
-      root.comment.gsub!(/(\n|^) +/, "\\1")
-
-      unless @layer_types.empty?
+    def build_id_table(cond)
+      if @layer_types.empty?
+        return []
+      else
         r = @ids_rel.clone
         r.apply_condition(cond)
         ids_sql = r.to_sql
-        if ids_sql
-          ids_table = connection.select_all(ids_sql).map do |row|
-            row.each do |k,v|
-              row[k] = denilify(v)
-            end
+        return connection.select_all(ids_sql).map do |row|
+          row.each do |k,v|
+            row[k] = denilify(v)
           end
-          fill_layers(ids_table, {[] => root}, @layer_types)
         end
       end
-
-      root
-    end
-
-    def fill_layers(ids_table, parents, types, type_idx = 0)
-      return if type_idx >= types.size
-
-      model = types[type_idx]
-      layer_ids = Set.new
-      cur_to_parent = {}
-
-      parent_types = types.take(type_idx)
-      ids_table.each do |row|
-        cur_id = row["#{model.name}_id"]
-        layer_ids.add cur_id
-        cur_to_parent[cur_id] ||= Set.new
-        cur_to_parent[cur_id].add parent_types.map{|m| row["#{m.name}_id"]}
-      end
-
-      layer = {}
-      model.all( # TODO: Find a way to do this with data streaming
-        :conditions => {model.primary_key => layer_ids.to_a},
-        :order => model.mochigome_focus_settings.get_ordering
-      ).each do |obj|
-        f = obj.mochigome_focus
-        dn = DataNode.new(f.type_name, f.name)
-        dn.merge!(f.field_data)
-
-        # TODO: Maybe make special fields below part of ModelExtensions?
-        dn[:id] = obj.id
-        dn[:internal_type] = model.name
-
-        cur_to_parent.fetch(obj.id).each do |parent_ids_seq|
-          cloned = dn.clone
-          parents.fetch(parent_ids_seq) << cloned
-          layer[parent_ids_seq + [obj.id]] = cloned
-        end
-      end
-
-      fill_layers(ids_table, layer, types, type_idx + 1)
     end
 
     def load_aggregate_data(node, cond)
@@ -185,15 +224,16 @@ module Mochigome
               c[group_values.last] = data_values
             end
           end
-          insert_aggregate_data_fields(node, data_tree, agg_settings)
+          insert_aggregate_data_fields(node, data_tree, agg_settings, 0)
         end
       end
     end
 
-    def insert_aggregate_data_fields(node, table, agg_settings)
+    def insert_aggregate_data_fields(node, table, agg_settings, depth)
+      return unless node[:internal_type] == @layer_types[depth].name
       if table.is_a? Array
         fields = agg_settings.options[:fields]
-        # Pre-fill the node with all fields in the right order
+        # Pre-fill the node with default values in the right order
         fields.each{|fld| node[fld[:name]] = fld[:default] unless fld[:hidden] }
         agg_row = {} # Hold regular results here to be used in ruby-based fields
         fields.reject{|fld| fld[:in_ruby]}.zip(table).each do |fld, v|
@@ -205,12 +245,12 @@ module Mochigome
           node[fld[:name]] = fld[:ruby_proc].call(agg_row)
         end
         node.children.each do |c|
-          insert_aggregate_data_fields(c, [], agg_settings)
+          insert_aggregate_data_fields(c, [], agg_settings, depth+1)
         end
       else
         node.children.each do |c|
           subtable = table[c[:id]] || []
-          insert_aggregate_data_fields(c, subtable, agg_settings)
+          insert_aggregate_data_fields(c, subtable, agg_settings, depth+1)
         end
       end
     end
