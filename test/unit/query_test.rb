@@ -148,6 +148,14 @@ describe Mochigome::Query do
     assert_no_children data_node/0/0
   end
 
+  it "can build a two-layer tree from a simple list-equivalent layer tree" do
+    q = Mochigome::Query.new({:report => {Category => Product}})
+    data_node = q.run(@category1)
+    assert_equal_children [@category1], data_node
+    assert_equal_children [@product_a, @product_b], data_node/0
+    assert_no_children data_node/0/0
+  end
+
   it "cannot build a Query through disconnected layers" do
     assert_raises Mochigome::QueryError do
       q = Mochigome::Query.new([Category, BoringDatum])
@@ -168,6 +176,16 @@ describe Mochigome::Query do
       assert_equal_children [@product_a, @product_c], data_node/0/0
       assert_equal_children [@product_c, @product_d], data_node/1/1
     end
+  end
+
+  it "can build a three-layer tree from a simple list-equivalent layer tree" do
+    q = Mochigome::Query.new({:report => {Owner => {Store => Product}}})
+    data_node = q.run([@john, @jane])
+      assert_equal_children [@john, @jane], data_node
+      assert_equal_children [@store_x], data_node/0
+      assert_equal_children [@store_y, @store_z], data_node/1
+      assert_equal_children [@product_a, @product_c], data_node/0/0
+      assert_equal_children [@product_c, @product_d], data_node/1/1
   end
 
   it "can subgroup layers by attributes" do
@@ -617,5 +635,16 @@ describe Mochigome::Query do
     assert_equal 1, (dn/0).children.size
     assert_equal "Widget 6", (dn/5).name
     assert_equal 3, (dn/5).children.size
+  end
+
+  it "can create cross-group reports when given a layer tree" do
+    q = Mochigome::Query.new({:report => {Owner => [Store, Category]}})
+    dn = q.run
+    assert_equal "John Smith", (dn/0).name
+    assert_equal 3, (dn/0).children.size
+    assert_equal "John's Store", (dn/0/0).name
+    assert_equal "Store", (dn/0/0)[:internal_type]
+    assert_equal "Category 1", (dn/0/1).name
+    assert_equal "Category", (dn/0/1)[:internal_type]
   end
 end

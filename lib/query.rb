@@ -1,18 +1,25 @@
 module Mochigome
   class Query
     def initialize(layer_tree, options = {})
-      @lines = []
       @name = options.delete(:root_name).try(:to_s) || "report"
-      @lines << QueryLine.new(layer_tree, options) # FIXME Not really tree...
+
+      if layer_tree.is_a? Array
+        @lines = [QueryLine.new(layer_tree, options)]
+      elsif layer_tree.is_a? Hash
+        unless layer_tree.size == 1 && layer_tree.keys.first == :report
+          raise QueryError.new("Hash given does not describe report tree")
+        end
+        @lines = Query.tree_root_to_leaf_paths(layer_tree.values.first).map do |s|
+          QueryLine.new(s, options)
+        end
+      end
     end
 
     def run(cond = nil)
-      id_tables = []
       model_ids = {}
       parental_seqs = {}
       @lines.each do |line|
         tbl = line.build_id_table(cond)
-        id_tables << tbl
         parent_models = []
         line.layer_types.each do |model|
           tbl.each do |ids_row|
@@ -40,6 +47,18 @@ module Mochigome
 
     private
 
+    def self.tree_root_to_leaf_paths(t)
+      if t.is_a?(Hash)
+        t.map{|k, v|
+          tree_root_to_leaf_paths(v).map{|p| [k] + p}
+        }.flatten(1)
+      elsif t.is_a?(Array)
+        t.map{|v| tree_root_to_leaf_paths(v)}.flatten(1)
+      else
+        [[t]]
+      end
+    end
+
     def generate_datanodes(model_ids)
       model_datanodes = {}
       model_ids.keys.each do |model|
@@ -60,7 +79,6 @@ module Mochigome
     end
 
     def add_datanode_children(path, node, model_datanodes, parental_seqs)
-      # TODO: Order by left-to-right class order in Query init tree
       path_children = parental_seqs[path]
       return unless path_children
       ordered_children = {}
@@ -73,10 +91,19 @@ module Mochigome
           model_datanodes,
           parental_seqs
         )
-        ordered_children[seq_idx] = dn
+
+        # Sorting by left-to-right class order in Query layer tree, then
+        # by the order of the records themselves.
+        # TODO: This way of getting model_idx could create problems
+        # if a class appears more than once in the tree.
+        model_idx = @lines.index{|line| line.layer_types.any?{|m| m.name == model}}
+        (ordered_children[model_idx] ||= {})[seq_idx] = dn
       end
       ordered_children.keys.sort.each do |k|
-        node.children << ordered_children[k]
+        subhash = ordered_children[k]
+        subhash.keys.sort.each do |seqkey|
+          node.children << subhash[seqkey]
+        end
       end
     end
 
@@ -86,7 +113,9 @@ module Mochigome
         Mochigome Version: #{Mochigome::VERSION}
         Report Generated: #{Time.now}
         eos
+        # FIXME Show layers and joins for all lines individually
         #Layers: #{@layer_types.map(&:name).join(" => ")}
+        #eos
         #@ids_rel.joins.each do |src, tgt|
         #  root.comment += "Join: #{src.name} -> #{tgt.name}\n"
         #end
