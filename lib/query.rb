@@ -85,13 +85,13 @@ module Mochigome
       root.comment = <<-eos
         Mochigome Version: #{Mochigome::VERSION}
         Report Generated: #{Time.now}
-      eos
-      #Layers: #{@layer_types.map(&:name).join(" => ")}
-      #@ids_rel.joins.each do |src, tgt|
-      #  root.comment += "Join: #{src.name} -> #{tgt.name}\n"
-      #end
-      root.comment.gsub!(/(\n|^) +/, "\\1")
-      return root
+        eos
+        #Layers: #{@layer_types.map(&:name).join(" => ")}
+        #@ids_rel.joins.each do |src, tgt|
+        #  root.comment += "Join: #{src.name} -> #{tgt.name}\n"
+        #end
+        root.comment.gsub!(/(\n|^) +/, "\\1")
+        return root
     end
   end
 
@@ -230,7 +230,7 @@ module Mochigome
     end
 
     def insert_aggregate_data_fields(node, table, agg_settings, depth)
-      return unless node[:internal_type] == @layer_types[depth].name
+      return unless depth == 0 || node[:internal_type] == @layer_types[depth-1].name
       if table.is_a? Array
         fields = agg_settings.options[:fields]
         # Pre-fill the node with default values in the right order
