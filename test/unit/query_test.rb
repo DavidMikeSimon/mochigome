@@ -517,9 +517,6 @@ describe Mochigome::Query do
     data_node = q.run([@store_x, @store_y, @store_z])
     c = data_node.comment
     assert_match c, /^Mochigome Version: #{Mochigome::VERSION}\n/
-    assert_match c, /\nReport Generated: \w{3} \w{3} \d+ .+\n/
-    assert_match c, /\nLayers: Owner => Store => Product\n/
-    assert_match c, /\nJoin: \w+ -> \w+\n/
   end
 
   it "names the root node 'report' by default" do
