@@ -4,7 +4,6 @@ module Mochigome
       @name = options.delete(:root_name).try(:to_s) || "report"
       access_filter = options.delete(:access_filter) || lambda {|cls| {}}
       aggregate_sources = options.delete(:aggregate_sources) || []
-      # TODO: Validate that aggregate_sources is in the correct format
       unless options.empty?
         raise QueryError.new("Unknown options: #{options.keys.inspect}")
       end
@@ -19,8 +18,10 @@ module Mochigome
         end
         layer_paths = Query.tree_root_to_leaf_paths(layers.values.first)
       end
-      @lines = layer_paths.map do |path|
-        QueryLine.new(path, access_filter, aggregate_sources)
+      @lines = layer_paths.map{ |path| QueryLine.new(path, access_filter) }
+
+      aggregate_sources.each do |a|
+        @lines.first.add_aggregate_source(a)
       end
     end
 
@@ -137,76 +138,80 @@ module Mochigome
 
   class QueryLine
     attr_accessor :layer_types
+    attr_accessor :ids_rel
 
-    def initialize(layer_types, access_filter, aggregate_sources)
+    def initialize(layer_types, access_filter)
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
+      @access_filter = access_filter
 
       @ids_rel = Relation.new(@layer_types)
-      @ids_rel.apply_access_filter_func(access_filter)
+      @ids_rel.apply_access_filter_func(@access_filter)
 
       @aggregate_rels = ActiveSupport::OrderedHash.new
-      aggregate_sources.each do |a|
-        focus_model, data_model, agg_setting_name = nil, nil, nil
-        if a.is_a?(Array) then
-          focus_model = a.select{|e| e.is_a?(Class)}.first
-          data_model = a.select{|e| e.is_a?(Class)}.last
-          agg_setting_name = a.select{|e| e.is_a?(Symbol)}.first || :default
-        else
-          focus_model = data_model = a
-          agg_setting_name = :default
-        end
+    end
 
-        agg_rel = Relation.new(@layer_types)
-        agg_rel.join_on_path_thru([focus_model, data_model])
-        agg_rel.apply_access_filter_func(access_filter)
-
-        key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
-
-        agg_fields = data_model.
-          mochigome_aggregation_settings(agg_setting_name).
-          options[:fields].reject{|a| a[:in_ruby]}
-        agg_fields.each_with_index do |a, i|
-          d_expr = a[:value_proc].call(data_model.arel_table)
-          d_expr = d_expr.expr if d_expr.respond_to?(:expr)
-          agg_rel.select_expr(d_expr.as("d%03u" % i))
-        end
-
-        agg_rel_key = {
-          :focus_model => focus_model,
-          :data_model => data_model,
-          :agg_setting_name => agg_setting_name
-        }
-
-        @aggregate_rels[agg_rel_key] = (0..key_cols.length).map{|n|
-          lambda {|cond|
-            data_rel = agg_rel.clone
-            data_rel.apply_condition(cond)
-            data_cols = key_cols.take(n) + [data_model.arel_primary_key]
-            inner_rel = data_rel.to_arel
-            data_cols.each_with_index do |col, i|
-              inner_rel.project(col.as("g%03u" % i)).group(col)
-            end
-
-            # FIXME: This subtable won't be necessary for all aggregation funcs.
-            # When we can avoid it, we should, for performance.
-            rel = Arel::SelectManager.new(
-              Arel::Table.engine,
-              Arel.sql("(#{inner_rel.to_sql}) as mochigome_data")
-            )
-            d_tbl = Arel::Table.new("mochigome_data")
-            agg_fields.each_with_index do |a, i|
-              name = "d%03u" % i
-              rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
-            end
-            key_cols.take(n).each_with_index do |col, i|
-              name = "g%03u" % i
-              rel.project(d_tbl[name].as(name)).group(name)
-            end
-            rel
-          }
-        }
+    def add_aggregate_source(a)
+      focus_model, data_model, agg_setting_name = nil, nil, nil
+      if a.is_a?(Array) then
+        focus_model = a.select{|e| e.is_a?(Class)}.first
+        data_model = a.select{|e| e.is_a?(Class)}.last
+        agg_setting_name = a.select{|e| e.is_a?(Symbol)}.first || :default
+      else
+        focus_model = data_model = a
+        agg_setting_name = :default
       end
+      # FIXME Raise exception if a isn't in a correct format
+
+      agg_rel = Relation.new(@layer_types)
+      agg_rel.join_on_path_thru([focus_model, data_model])
+      agg_rel.apply_access_filter_func(@access_filter)
+
+      key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
+
+      agg_fields = data_model.
+        mochigome_aggregation_settings(agg_setting_name).
+        options[:fields].reject{|a| a[:in_ruby]}
+      agg_fields.each_with_index do |a, i|
+        d_expr = a[:value_proc].call(data_model.arel_table)
+        d_expr = d_expr.expr if d_expr.respond_to?(:expr)
+        agg_rel.select_expr(d_expr.as("d%03u" % i))
+      end
+
+      agg_rel_key = {
+        :focus_model => focus_model,
+        :data_model => data_model,
+        :agg_setting_name => agg_setting_name
+      }
+
+      @aggregate_rels[agg_rel_key] = (0..key_cols.length).map{|n|
+        lambda {|cond|
+          data_rel = agg_rel.clone
+          data_rel.apply_condition(cond)
+          data_cols = key_cols.take(n) + [data_model.arel_primary_key]
+          inner_rel = data_rel.to_arel
+          data_cols.each_with_index do |col, i|
+            inner_rel.project(col.as("g%03u" % i)).group(col)
+          end
+
+          # FIXME: This subtable won't be necessary for all aggregation funcs.
+          # When we can avoid it, we should, for performance.
+          rel = Arel::SelectManager.new(
+            Arel::Table.engine,
+            Arel.sql("(#{inner_rel.to_sql}) as mochigome_data")
+          )
+          d_tbl = Arel::Table.new("mochigome_data")
+          agg_fields.each_with_index do |a, i|
+            name = "d%03u" % i
+            rel.project(a[:agg_proc].call(d_tbl[name]).as(name))
+          end
+          key_cols.take(n).each_with_index do |col, i|
+            name = "g%03u" % i
+            rel.project(d_tbl[name].as(name)).group(name)
+          end
+          rel
+        }
+      }
     end
 
     def connection
