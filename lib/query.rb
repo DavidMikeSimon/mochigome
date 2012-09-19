@@ -1,17 +1,26 @@
 module Mochigome
   class Query
-    def initialize(layer_tree, options = {})
+    def initialize(layers, options = {})
       @name = options.delete(:root_name).try(:to_s) || "report"
+      access_filter = options.delete(:access_filter) || lambda {|cls| {}}
+      aggregate_sources = options.delete(:aggregate_sources) || []
+      # TODO: Validate that aggregate_sources is in the correct format
+      unless options.empty?
+        raise QueryError.new("Unknown options: #{options.keys.inspect}")
+      end
 
-      if layer_tree.is_a? Array
-        @lines = [QueryLine.new(layer_tree, options)]
-      elsif layer_tree.is_a? Hash
-        unless layer_tree.size == 1 && layer_tree.keys.first == :report
-          raise QueryError.new("Hash given does not describe report tree")
+      if layers.is_a? Array
+        layer_paths = [layers]
+      else
+        unless layers.is_a?(Hash) &&
+        layers.size == 1 &&
+        layers.keys.first == :report
+          raise QueryError.new("Invalid layer tree")
         end
-        @lines = Query.tree_root_to_leaf_paths(layer_tree.values.first).map do |s|
-          QueryLine.new(s, options)
-        end
+        layer_paths = Query.tree_root_to_leaf_paths(layers.values.first)
+      end
+      @lines = layer_paths.map do |path|
+        QueryLine.new(path, access_filter, aggregate_sources)
       end
     end
 
@@ -129,19 +138,12 @@ module Mochigome
   class QueryLine
     attr_accessor :layer_types
 
-    def initialize(layer_types, options = {})
+    def initialize(layer_types, access_filter, aggregate_sources)
       # TODO: Validate layer types: not empty, AR, act_as_mochigome_focus
       @layer_types = layer_types
 
-      @access_filter = options.delete(:access_filter) || lambda {|cls| {}}
-      # TODO: Validate that aggregate_sources is in the correct format
-      aggregate_sources = options.delete(:aggregate_sources) || []
-      unless options.empty?
-        raise QueryError.new("Unknown options: #{options.keys.inspect}")
-      end
-
       @ids_rel = Relation.new(@layer_types)
-      @ids_rel.apply_access_filter_func(@access_filter)
+      @ids_rel.apply_access_filter_func(access_filter)
 
       @aggregate_rels = ActiveSupport::OrderedHash.new
       aggregate_sources.each do |a|
@@ -157,7 +159,7 @@ module Mochigome
 
         agg_rel = Relation.new(@layer_types)
         agg_rel.join_on_path_thru([focus_model, data_model])
-        agg_rel.apply_access_filter_func(@access_filter)
+        agg_rel.apply_access_filter_func(access_filter)
 
         key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
 

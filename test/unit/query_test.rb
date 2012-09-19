@@ -647,4 +647,7 @@ describe Mochigome::Query do
     assert_equal "Category 1", (dn/0/1).name
     assert_equal "Category", (dn/0/1)[:internal_type]
   end
+
+  it "can run aggregations on cross-group reports" do
+  end
 end
