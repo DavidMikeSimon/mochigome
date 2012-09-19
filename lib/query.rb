@@ -21,7 +21,7 @@ module Mochigome
       @lines = layer_paths.map{ |path| QueryLine.new(path, access_filter) }
 
       aggregate_sources.each do |a|
-        @lines.first.add_aggregate_source(a)
+        @lines.each{|line| line.add_aggregate_source(a)}
       end
     end
 

@@ -649,5 +649,16 @@ describe Mochigome::Query do
   end
 
   it "can run aggregations on cross-group reports" do
+    q = Mochigome::Query.new(
+      {:report => {Owner => [Store, Category]}},
+      :aggregate_sources => [Sale]
+    )
+    dn = q.run
+    assert_equal "John Smith", (dn/0).name
+    assert_equal 8, (dn/0)['Sales count']
+    assert_equal "John's Store", (dn/0/0).name
+    assert_equal 8, (dn/0/0)['Sales count']
+    assert_equal "Category 1", (dn/0/1).name
+    assert_equal 5, (dn/0/1)['Sales count']
   end
 end
