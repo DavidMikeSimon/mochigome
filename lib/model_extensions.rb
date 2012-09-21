@@ -154,22 +154,23 @@ module Mochigome
 
   class ReportFocus
     attr_reader :type_name
-    attr_reader :fields
 
     def initialize(owner, settings)
       @owner = owner
       @name_proc = settings.options[:name] || lambda{|obj| obj.name}
       @type_name = settings.options[:type_name] || owner.class.human_name
-      @fields = settings.options[:fields] || []
+      @fieldsets = settings.options[:fieldsets] || {}
     end
 
     def name
       @name_proc.call(@owner)
     end
 
-    def field_data
+    def field_data(fieldset_names = nil)
+      fieldset_names ||= [:default]
       h = ActiveSupport::OrderedHash.new
-      self.fields.each do |field|
+      field_descs = fieldset_names.map{|n|@fieldsets[n]}.compact.flatten(1).uniq
+      field_descs.each do |field|
         h[field[:name]] = field[:value_func].call(@owner)
       end
       h
@@ -184,7 +185,7 @@ module Mochigome
     def initialize(model)
       @model = model
       @options = {}
-      @options[:fields] = []
+      @options[:fieldsets] = {}
       @options[:custom_subgroup_exprs] = ActiveSupport::OrderedHash.new
       @options[:custom_assocs] = ActiveSupport::OrderedHash.new
       @options[:ignore_assocs] = Set.new
@@ -210,11 +211,15 @@ module Mochigome
     end
 
     def fields(fields)
+      fieldset(:default, fields)
+    end
+
+    def fieldset(name, fields)
       unless fields.respond_to?(:each)
-        raise ModelSetupError.new "Call f.fields with an Enumerable"
+        raise ModelSetupError.new "Call f.fieldset with an Enumerable"
       end
 
-      @options[:fields] += fields.map do |f|
+      field_descs = fields.map do |f|
         case f
         when String, Symbol then {
           :name => Mochigome::complain_if_reserved_name(f.to_s.strip),
@@ -227,6 +232,7 @@ module Mochigome
         else raise ModelSetupError.new "Invalid field: #{f.inspect}"
         end
       end
+      (@options[:fieldsets][name.to_sym] ||= []).concat field_descs
     end
 
     def custom_subgroup_expression(name, expr)

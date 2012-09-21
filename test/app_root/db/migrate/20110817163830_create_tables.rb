@@ -43,6 +43,10 @@ class CreateTables < ActiveRecord::Migration
       t.timestamps
       t.string :a
       t.string :b
+      t.string :c
+      t.string :d
+      t.string :e
+      t.string :f
       t.integer :product_id
       t.integer :x
     end

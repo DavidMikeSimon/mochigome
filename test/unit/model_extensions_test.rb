@@ -142,17 +142,34 @@ describe "an ActiveRecord model" do
       @model_class.mochigome_focus_settings.get_ordering
   end
 
-  it "can specify fields" do
+  it "can specify fields without name that act as fieldset named 'default'" do
     @model_class.class_eval do
       acts_as_mochigome_focus do |f|
         f.fields ["a", "b"]
       end
     end
-    i = @model_class.new(:a => "abc", :b => "xyz")
+    i = @model_class.new(:a => "abc", :b => "xyz", :c => "123")
     expected = ActiveSupport::OrderedHash.new
     expected["a"] = "abc"
     expected["b"] = "xyz"
     assert_equal expected, i.mochigome_focus.field_data
+    assert_equal expected, i.mochigome_focus.field_data([:default])
+  end
+
+  it "can specify and request fieldsets with custom names" do
+    @model_class.class_eval do
+      acts_as_mochigome_focus do |f|
+        f.fieldset :foo, ["c", "d"]
+        f.fieldset :bar, ["e"]
+        f.fieldset :zap, ["f"]
+      end
+    end
+    i = @model_class.new(:c => "cat", :d => "dog", :e => "elephant", :f => "ferret")
+    expected = ActiveSupport::OrderedHash.new
+    expected["f"] = "ferret"
+    expected["c"] = "cat"
+    expected["d"] = "dog"
+    assert_equal expected, i.mochigome_focus.field_data([:zap, :foo])
   end
 
   it "has no report focus data if no fields are specified" do
