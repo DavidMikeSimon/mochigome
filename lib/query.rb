@@ -18,6 +18,7 @@ module Mochigome
         end
         layer_paths = Query.tree_root_to_leaf_paths(layers.values.first)
       end
+      layer_paths = [[]] if layer_paths.empty? # Create at least one QueryLine
       @lines = layer_paths.map{ |path| QueryLine.new(path, access_filter) }
 
       aggregate_sources.each do |a|
