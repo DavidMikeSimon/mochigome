@@ -95,12 +95,9 @@ module Mochigome
       path_children.each do |model, i|
         src_dn, seq_idx = model_datanodes[model][i]
         dn = src_dn.clone
-        add_datanode_children(
-          path + [[model, i]],
-          dn,
-          model_datanodes,
-          parental_seqs
-        )
+        full_path = path + [[model, i]]
+        dn[:_report_path] = full_path.map(&:first).join("___")
+        add_datanode_children(full_path, dn, model_datanodes, parental_seqs)
 
         # Sorting by left-to-right class order in Query layer tree, then
         # by the order of the records themselves.

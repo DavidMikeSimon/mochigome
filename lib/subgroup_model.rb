@@ -27,7 +27,8 @@ module Mochigome
     end
 
     def name
-      "#{@model}$#{@attr}" # Warning: This has to be a valid SQL field name
+      # This works as both a valid SQL field name and a valid XML tag name
+      "#{@model}__#{@attr}"
     end
 
     def human_name
