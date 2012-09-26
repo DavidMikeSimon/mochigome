@@ -60,12 +60,21 @@ module Mochigome
 
     def self.tree_root_to_leaf_paths(t)
       if t.is_a?(Hash)
+        unless t.size == 1 && t.keys.first.acts_as_mochigome_focus?
+          raise QueryError.new "Invalid layer tree hash #{t}"
+        end
         t.map{|k, v|
           tree_root_to_leaf_paths(v).map{|p| [k] + p}
         }.flatten(1)
       elsif t.is_a?(Array)
+        unless t.all?{|e| e.is_a?(Hash) || e.acts_as_mochigome_focus?}
+          raise QueryError.new "Invalid layer tree array #{t}"
+        end
         t.map{|v| tree_root_to_leaf_paths(v)}.flatten(1)
       else
+        unless t.acts_as_mochigome_focus?
+          raise QueryError.new "Invalid layer tree element #{t}"
+        end
         [[t]]
       end
     end
