@@ -272,7 +272,9 @@ module Mochigome
     end
 
     def insert_aggregate_data_fields(node, table, agg_settings, depth)
+      # Ignore nodes inserted by other QueryLines
       return unless depth == 0 || node[:internal_type] == @layer_types[depth-1].name
+
       if table.is_a? Array
         fields = agg_settings.options[:fields]
         # Pre-fill the node with default values in the right order
