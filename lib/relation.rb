@@ -2,7 +2,7 @@ module Mochigome
   private
 
   class Relation
-    attr_reader :joins, :spine_layers
+    attr_reader :spine_layers, :join_path_descriptions
 
     def initialize(layers)
       @model_graph = ModelGraph.new
@@ -10,7 +10,7 @@ module Mochigome
       @models = Set.new
       @model_join_stack = []
       @spine = []
-      @joins = []
+      @join_path_descriptions = []
 
       @spine_layers.map(&:to_real_model).uniq.each do |m|
         join_to_model(m)
@@ -79,13 +79,17 @@ module Mochigome
       begin
         path = path.map(&:to_real_model).uniq
         join_to_model path.first
+        join_descrips = [path.first.name]
         (0..(path.size-2)).map{|i| [path[i], path[i+1]]}.each do |src, tgt|
           if @models.include?(tgt)
             apply_condition(@model_graph.edge_condition(src, tgt))
+            join_descrips << "*#{tgt.name}"
           else
             add_join_link(src, tgt)
+            join_descrips << tgt.name
           end
         end
+        @join_path_descriptions << join_descrips.join("->")
       rescue QueryError => e
         raise QueryError.new("Error pathing #{path.map(&:name).inspect}: #{e}")
       end
@@ -156,7 +160,6 @@ module Mochigome
         @model_join_stack.pop
       end
 
-      @joins << [src, tgt]
       @models.add tgt
     end
 

@@ -126,18 +126,17 @@ module Mochigome
 
     def create_root_node
       root = DataNode.new(:report, @name)
-      root.comment = <<-eos
-        Mochigome Version: #{Mochigome::VERSION}
-        Report Generated: #{Time.now}
-        eos
-        # FIXME Show layers and joins for all lines individually
-        #Layers: #{@layer_types.map(&:name).join(" => ")}
-        #eos
-        #@ids_rel.joins.each do |src, tgt|
-        #  root.comment += "Join: #{src.name} -> #{tgt.name}\n"
-        #end
-        root.comment.gsub!(/(\n|^) +/, "\\1")
-        return root
+      root.comment = "Mochigome Version: #{Mochigome::VERSION}\n"
+      root.comment += "Report Generated: #{Time.now}\n"
+      @lines.each_with_index do |line, i|
+        root.comment += "Query Line #{i+1}:\n"
+        root.comment += "  #{line.layer_types.map(&:name).join("=>")}\n"
+        root.comment += "  Join Paths:\n"
+        line.ids_rel.join_path_descriptions.each do |d|
+          root.comment += "    #{d}\n"
+        end
+      end
+      return root
     end
   end
 
