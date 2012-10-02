@@ -662,4 +662,22 @@ describe Mochigome::Query do
     assert_equal "Category 1", (dn/0/1).name
     assert_equal 5, (dn/0/1)['Sales count']
   end
+
+  it "can limit aggregations to certain points on the layer tree" do
+    q = Mochigome::Query.new(
+      {:report => {Owner => [Store, Category]}},
+      :aggregate_sources => {
+        [:report] => [Sale],
+        [:report, Owner, Store] => [Sale]
+      }
+    )
+    dn = q.run
+    assert_equal 24, dn['Sales count']
+    assert_equal "John Smith", (dn/0).name
+    refute (dn/0).has_key?('Sales count')
+    assert_equal "John's Store", (dn/0/0).name
+    assert_equal 8, (dn/0/0)['Sales count']
+    assert_equal "Category 1", (dn/0/1).name
+    refute (dn/0/1).has_key?('Sales count')
+  end
 end
