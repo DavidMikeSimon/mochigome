@@ -12,7 +12,8 @@ describe Mochigome::Query do
 
     @product_e = create(:product, :name => "Product E") # No category
 
-    @john = create(:owner, :first_name => "John", :last_name => "Smith")
+    @john = create(:owner, :first_name => "John", :last_name => "Smith",
+                  :birth_date => 25.years.ago)
     @store_x = create(:store, :name => "John's Store", :owner => @john)
 
     @jane = create(:owner, :first_name => "Jane", :last_name => "Doe",
@@ -679,5 +680,19 @@ describe Mochigome::Query do
     assert_equal 8, (dn/0/0)['Sales count']
     assert_equal "Category 1", (dn/0/1).name
     refute (dn/0/1).has_key?('Sales count')
+  end
+
+  it "can specify which fieldsets to use for particular models" do
+    q = Mochigome::Query.new(
+      [Owner],
+      :fieldsets => {
+        Owner => [:default, :age]
+      }
+    )
+    dn = q.run
+    assert_equal "John Smith", (dn/0).name
+    assert_equal 25, (dn/0)["age"]
+    assert_equal "Jane Doe", (dn/1).name
+    assert_equal 30.years.ago.to_date, (dn/1)["birth_date"]
   end
 end

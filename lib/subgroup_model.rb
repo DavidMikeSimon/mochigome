@@ -118,7 +118,7 @@ module Mochigome
       @rec.value
     end
 
-    def field_data
+    def field_data(fieldset_names = nil)
       {}
     end
   end

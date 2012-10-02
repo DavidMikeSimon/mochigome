@@ -6,7 +6,7 @@ module Mochigome
       base.write_inheritable_attribute :mochigome_focus_settings, nil
       base.class_inheritable_reader :mochigome_focus_settings
 
-      # FIXME: Unclear on how this interacts with inheritance...
+      # FIXME: Unclear on how this should interact with inheritance...
       base.write_inheritable_attribute :mochigome_aggregation_settings_sets, {}
       base.class_inheritable_reader :mochigome_aggregation_settings_sets
     end

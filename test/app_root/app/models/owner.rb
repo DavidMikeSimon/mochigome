@@ -1,5 +1,7 @@
 class Owner < ActiveRecord::Base
-  acts_as_mochigome_focus
+  acts_as_mochigome_focus do |f|
+    f.fieldset :age, ["birth_date", "age"]
+  end
 
   has_many :stores
 

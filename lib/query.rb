@@ -4,6 +4,7 @@ module Mochigome
       @name = options.delete(:root_name).try(:to_s) || "report"
       access_filter = options.delete(:access_filter) || lambda {|cls| {}}
       aggregate_sources = options.delete(:aggregate_sources) || {}
+      @fieldsets = options.delete(:fieldsets) || {}
       unless options.empty?
         raise QueryError.new("Unknown options: #{options.keys.inspect}")
       end
@@ -106,6 +107,7 @@ module Mochigome
     def generate_datanodes(model_ids)
       model_datanodes = {}
       model_ids.keys.each do |model|
+        model_datanodes[model.name] ||= {}
         # TODO: Find a way to do this without loading all recs at one time
         model.all(
           :conditions => {model.primary_key => model_ids[model].to_a},
@@ -113,10 +115,10 @@ module Mochigome
         ).each_with_index do |rec, seq_idx|
           f = rec.mochigome_focus
           dn = DataNode.new(f.type_name, f.name)
-          dn.merge!(f.field_data)
+          dn.merge!(f.field_data(@fieldsets[model]))
           dn[:id] = rec.id
           dn[:internal_type] = model.name
-          (model_datanodes[model.name] ||= {})[rec.id] = [dn, seq_idx]
+          model_datanodes[model.name][rec.id] = [dn, seq_idx]
         end
       end
       return model_datanodes
