@@ -654,6 +654,7 @@ describe Mochigome::Query do
       :aggregate_sources => [Sale]
     )
     dn = q.run
+    assert_equal 24, dn['Sales count']
     assert_equal "John Smith", (dn/0).name
     assert_equal 8, (dn/0)['Sales count']
     assert_equal "John's Store", (dn/0/0).name

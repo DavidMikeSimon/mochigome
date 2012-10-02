@@ -169,20 +169,11 @@ module Mochigome
       end
       # FIXME Raise exception if a isn't in a correct format
 
-      agg_rel = Relation.new(@layer_types)
-      agg_rel.join_on_path_thru([focus_model, data_model])
-      agg_rel.apply_access_filter_func(@access_filter)
-
       key_cols = @ids_rel.spine_layers.map{|m| m.arel_primary_key}
 
       agg_fields = data_model.
         mochigome_aggregation_settings(agg_setting_name).
         options[:fields].reject{|a| a[:in_ruby]}
-      agg_fields.each_with_index do |a, i|
-        d_expr = a[:value_proc].call(data_model.arel_table)
-        d_expr = d_expr.expr if d_expr.respond_to?(:expr)
-        agg_rel.select_expr(d_expr.as("d%03u" % i))
-      end
 
       agg_rel_key = {
         :focus_model => focus_model,
@@ -191,6 +182,16 @@ module Mochigome
       }
 
       @aggregate_rels[agg_rel_key] = (0..key_cols.length).map{|n|
+        agg_rel = Relation.new(@ids_rel.spine_layers.take(n))
+        agg_rel.join_on_path_thru([focus_model, data_model])
+        agg_rel.apply_access_filter_func(@access_filter)
+
+        agg_fields.each_with_index do |a, i|
+          d_expr = a[:value_proc].call(data_model.arel_table)
+          d_expr = d_expr.expr if d_expr.respond_to?(:expr)
+          agg_rel.select_expr(d_expr.as("d%03u" % i))
+        end
+
         lambda {|cond|
           data_rel = agg_rel.clone
           data_rel.apply_condition(cond)
