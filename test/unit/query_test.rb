@@ -318,6 +318,21 @@ describe Mochigome::Query do
     assert_empty data_node.children
   end
 
+  it "can collect aggregate data in non-association-order layer designs" do
+    q = Mochigome::Query.new([Product, Owner, Store], :aggregate_sources => [Sale])
+    data_node = q.run
+    assert_equal_children [
+      @product_a, @product_b, @product_c, @product_d, @product_e
+    ], data_node
+    assert_equal_children [@john, @jane], data_node/0
+    assert_equal_children [@jane], data_node/1
+    assert_equal_children [@store_x], data_node/0/0
+    assert_equal_children [@store_y], data_node/1/0
+    assert_equal 9, (data_node/0)["Sales count"]
+    assert_equal 5, (data_node/0/0)["Sales count"]
+  end
+
+
   it "can use a named aggregate data setting" do
     q = Mochigome::Query.new(
       [Owner],
