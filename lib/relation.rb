@@ -52,7 +52,7 @@ module Mochigome
       end
 
       raise QueryError.new("No path to #{model}") unless best_path
-      join_on_path(best_path)
+      join_on_path best_path, "Best path to model #{model}"
 
       # Also use the conditions of any other unique path
       # TODO: Write a test that requires the below code to work
@@ -60,22 +60,22 @@ module Mochigome
         extra_path = @model_graph.path_thru([n, model])
         if extra_path
           unless best_path.all?{|m| extra_path.include?(m)}
-            join_on_path extra_path
+            join_on_path extra_path, "Additional path to model #{model}"
           end
         end
       end
     end
 
-    def join_on_path_thru(path)
+    def join_on_path_thru(path, descrip = nil)
       full_path = @model_graph.path_thru(path)
       if full_path
-        join_on_path(full_path)
+        join_on_path(full_path, descrip || "Generic path thru #{path.map(&:name).inspect}")
       else
         raise QueryError.new("Cannot route thru #{path.map(&:name).inspect}")
       end
     end
 
-    def join_on_path(path, options = {})
+    def join_on_path(path, descrip = "Generic")
       begin
         path = path.map(&:to_real_model).uniq
         join_to_model path.first
@@ -89,7 +89,7 @@ module Mochigome
             join_descrips << tgt.name
           end
         end
-        @join_path_descriptions << join_descrips.join("->")
+        @join_path_descriptions << "#{join_descrips.join("->")} (#{descrip})"
       rescue QueryError => e
         raise QueryError.new("Error pathing #{path.map(&:name).inspect}: #{e}")
       end
@@ -130,7 +130,7 @@ module Mochigome
             # FIXME: Eventually we need to support joins that
             # double back, if only for CanCan stuff, so get rid of this
             # uniq junk.
-            join_on_path_thru path.uniq
+            join_on_path_thru path.uniq, "Access filter for #{m.name}"
           end
           if h[:condition]
             apply_condition h.delete(:condition)
