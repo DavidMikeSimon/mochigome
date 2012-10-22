@@ -33,6 +33,7 @@ class Product < ActiveRecord::Base
   has_many :store_products
   has_many :stores, :through => :store_products
   has_many :sales, :through => :store_products
+  has_many :favorites
 
   validates_presence_of :name
   validates_presence_of :price

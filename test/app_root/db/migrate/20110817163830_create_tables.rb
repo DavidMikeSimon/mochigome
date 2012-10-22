@@ -38,6 +38,12 @@ class CreateTables < ActiveRecord::Migration
       t.timestamps
     end
 
+    # Used to create an alternate path to try and confuse ModelGraph
+    create_table :favorites do |t|
+      t.integer :owner_id
+      t.integer :product_id
+    end
+
     # Used by ModelExtensionTest to create temporary models
     create_table :fake do |t|
       t.timestamps

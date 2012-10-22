@@ -33,6 +33,11 @@ FactoryGirl.define do
     store_product
   end
 
+  factory :favorite do
+    owner
+    product
+  end
+
   factory :boring_datum do
     foo 'Bar'
   end
