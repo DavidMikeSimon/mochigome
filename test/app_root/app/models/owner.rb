@@ -4,7 +4,6 @@ class Owner < ActiveRecord::Base
   end
 
   has_many :stores
-  has_many :products, :through => :stores
   has_many :favorites
 
   def name(reverse = false)

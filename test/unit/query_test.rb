@@ -337,14 +337,6 @@ describe Mochigome::Query do
     assert_equal 5, (data_node/0/0)["Sales count"]
   end
 
-  it "favors joins that are marked as :through, even if they are nested" do
-    q = Mochigome::Query.new([Owner, Product])
-    data_node = q.run
-    assert_equal_children [@john, @jane], data_node
-    assert_equal_children [@product_a, @product_c], data_node/0
-    assert_equal_children Product.all, data_node/1
-  end
-
   it "can use a named aggregate data setting" do
     q = Mochigome::Query.new(
       [Owner],
