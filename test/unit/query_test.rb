@@ -550,7 +550,7 @@ describe Mochigome::Query do
 
   # TODO: Test use of non-trivial function for aggregation value
 
-  it "puts a comment on the root node describing the query" do
+  it "sets a comment on the root node describing the query" do
     q = Mochigome::Query.new([Owner, Store, Product])
     data_node = q.run([@store_x, @store_y, @store_z])
     c = data_node.comment

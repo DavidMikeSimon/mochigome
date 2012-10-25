@@ -51,7 +51,7 @@ module Mochigome
         end
       end
 
-      raise QueryError.new("No path to #{model}") unless best_path
+      raise QueryError.new("No path to #{model} from #{@models.map(&:name).inspect}") unless best_path
       join_on_path best_path, "Best path to model #{model}"
 
       # Also use the conditions of any other unique path

@@ -1,6 +1,7 @@
 class Owner < ActiveRecord::Base
   acts_as_mochigome_focus do |f|
     f.fieldset :age, ["birth_date", "age"]
+    f.preferred_path_to Product, :stores
   end
 
   has_many :stores

@@ -120,7 +120,8 @@ module Mochigome
 
         ignore_assocs = []
         if model.acts_as_mochigome_focus?
-          ignore_assocs = model.mochigome_focus_settings.options[:ignore_assocs]
+          opts = model.mochigome_focus_settings.options
+          ignore_assocs = opts[:ignore_assocs]
         end
 
         model.reflections.
@@ -157,12 +158,6 @@ module Mochigome
       end
 
       added_models.each do |model|
-        # FIXME: Un-DRY, this is a C&P from above
-        ignore_assocs = []
-        if model.acts_as_mochigome_focus?
-          ignore_assocs = model.mochigome_focus_settings.options[:ignore_assocs]
-        end
-
         next unless @assoc_graph.has_vertex?(model)
         path_tree = @assoc_graph.bfs_search_tree_from(model).reverse
         path_tree.depth_first_search do |tgt_model|
@@ -173,10 +168,22 @@ module Mochigome
           end
           @shortest_paths[[model,tgt_model]] = path
         end
+      end
+
+      added_models.each do |model|
+        ignore_assocs, model_preferred_paths = [], {}
+        if model.acts_as_mochigome_focus?
+          opts = model.mochigome_focus_settings.options
+          ignore_assocs = opts[:ignore_assocs]
+          model_preferred_paths = opts[:preferred_paths]
+        end
+
+        preferred_paths = {}
 
         # Use through reflections as a hint for preferred indirect paths
-        model.reflections.
-        select{|name, assoc| assoc.through_reflection}.
+        # TODO Support for nested through reflections
+        # (Though Rails 2 doesn't support them either...)
+        model.reflections.select{|name, assoc| assoc.through_reflection}.
         reject{|name, assoc| ignore_assocs.include? name.to_sym}.
         reject{|name, assoc| ignore_assocs.include? assoc.through_reflection.name.to_sym}.
         to_a.sort{|a,b| a.first.to_s <=> b.first.to_s}.
@@ -187,9 +194,60 @@ module Mochigome
           rescue NameError
             # FIXME Can't handle polymorphic through reflection
           end
-          edge = [model,foreign_model]
-          next if @shortest_paths[edge].try(:size).try(:<, 3)
-          @shortest_paths[edge] = [model, join_model, foreign_model]
+          edge = [model, foreign_model]
+          path = [model, join_model, foreign_model]
+          next if @shortest_paths[edge].try(:size).try(:<, path.size)
+          preferred_paths[edge] = path
+        end
+
+        # Model focus can specify paths with prefered_path_to
+        model_preferred_paths.each do |tgt_model_name, assoc_name|
+          tgt_model = tgt_model_name.constantize
+          edge = [model, tgt_model]
+          assoc = model.reflections[assoc_name]
+          sub_path = @shortest_paths[[assoc.klass, tgt_model]]
+          unless sub_path
+            raise ModelSetupError.new(
+              "Can't find subpath to #{tgt_model} via #{model.name}.#{assoc_name}"
+            )
+          end
+          if sub_path.include?(model)
+            raise ModelSetupError.new(
+              "Subpath to #{tgt_model} via #{model.name}.#{assoc_name} loops back"
+            )
+          end
+          sub_link = @shortest_paths[[model, assoc.klass]]
+          preferred_paths[edge] = sub_link + sub_path.drop(1)
+        end
+
+        # Replace all instances of the default path in the path directory
+        # with the preferred path, including when the default path is
+        # a subset of a larger path, and/or when the direction of travel
+        # is reversed.
+        # FIXME What if preferred paths conflict?
+        # FIXME What if one preferred path causes a shortest_path to become
+        # applicable under another one? Then arbitrary model scanning
+        # order matters, and it shouldn't. Is there even a consistent
+        # way to deal with this?
+        preferred_paths.each do |edge, path|
+          [lambda{|a| a}, lambda{|a| a.reverse}].each do |prc|
+            e, p = prc.call(edge), prc.call(path)
+            old_path = @shortest_paths[e]
+            next if old_path == p
+            edges_to_replace = {}
+            @shortest_paths.each do |se, sp|
+              p_begin = sp.find_index(old_path.first)
+              if p_begin && sp[p_begin, old_path.size] == old_path
+                edges_to_replace[se] =
+                  sp.take(p_begin) +
+                  p +
+                  sp.drop(p_begin + old_path.size)
+              end
+            end
+            edges_to_replace.each do |re, rp|
+              @shortest_paths[re] = rp
+            end
+          end
         end
       end
     end

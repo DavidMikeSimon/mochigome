@@ -189,6 +189,7 @@ module Mochigome
       @options[:custom_subgroup_exprs] = ActiveSupport::OrderedHash.new
       @options[:custom_assocs] = ActiveSupport::OrderedHash.new
       @options[:ignore_assocs] = Set.new
+      @options[:preferred_paths] = {}
     end
 
     def type_name(n)
@@ -246,6 +247,10 @@ module Mochigome
     # TODO: Unit test for this feature
     def ignore_assoc(name)
       @options[:ignore_assocs].add name.to_sym
+    end
+
+    def preferred_path_to(target_model, assoc_name)
+      @options[:preferred_paths][target_model.name] = assoc_name
     end
   end
 
