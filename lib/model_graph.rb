@@ -170,6 +170,8 @@ module Mochigome
         end
       end
 
+      preferred_paths = {}
+
       added_models.each do |model|
         ignore_assocs, model_preferred_paths = [], {}
         if model.acts_as_mochigome_focus?
@@ -177,8 +179,6 @@ module Mochigome
           ignore_assocs = opts[:ignore_assocs]
           model_preferred_paths = opts[:preferred_paths]
         end
-
-        preferred_paths = {}
 
         # Use through reflections as a hint for preferred indirect paths
         # TODO Support for nested through reflections
@@ -192,7 +192,8 @@ module Mochigome
             foreign_model = assoc.klass
             join_model = assoc.through_reflection.klass
           rescue NameError
-            # FIXME Can't handle polymorphic through reflection
+            # FIXME Can't handle polymorphic through reflection, skip for now
+            next
           end
           edge = [model, foreign_model]
           path = [model, join_model, foreign_model]
@@ -219,34 +220,37 @@ module Mochigome
           sub_link = @shortest_paths[[model, assoc.klass]]
           preferred_paths[edge] = sub_link + sub_path.drop(1)
         end
+      end
 
-        # Replace all instances of the default path in the path directory
-        # with the preferred path, including when the default path is
-        # a subset of a larger path, and/or when the direction of travel
-        # is reversed.
-        # FIXME What if preferred paths conflict?
-        # FIXME What if one preferred path causes a shortest_path to become
-        # applicable under another one? Then arbitrary model scanning
-        # order matters, and it shouldn't. Is there even a consistent
-        # way to deal with this?
-        preferred_paths.each do |edge, path|
-          [lambda{|a| a}, lambda{|a| a.reverse}].each do |prc|
-            e, p = prc.call(edge), prc.call(path)
-            old_path = @shortest_paths[e]
-            next if old_path == p
-            edges_to_replace = {}
-            @shortest_paths.each do |se, sp|
-              p_begin = sp.find_index(old_path.first)
-              if p_begin && sp[p_begin, old_path.size] == old_path
-                edges_to_replace[se] =
-                  sp.take(p_begin) +
-                  p +
-                  sp.drop(p_begin + old_path.size)
-              end
+      # Replace all instances of the default path in the path directory
+      # with the preferred path, including when the default path is
+      # a subset of a larger path, and/or when the direction of travel
+      # is reversed.
+      # FIXME What if preferred paths conflict?
+      # FIXME What if one preferred path causes a shortest_path to become
+      # applicable under another one? Then arbitrary model scanning
+      # order matters, and it shouldn't. Is there even a consistent
+      # way to deal with this? Keep cycling through until we don't
+      # have any more replacements? Have to make sure not to cycle
+      # forever, though...
+      preferred_paths.keys.sort{|a,b| a.map(&:name) <=> b.map(&:name)}.each do |edge|
+        path = preferred_paths[edge]
+        [lambda{|a| a}, lambda{|a| a.reverse}].each do |prc|
+          e, p = prc.call(edge), prc.call(path)
+          old_path = @shortest_paths[e] or next
+          next if old_path == p
+          edges_to_replace = {}
+          @shortest_paths.each do |se, sp|
+            p_begin = sp.find_index(old_path.first)
+            if p_begin && sp[p_begin, old_path.size] == old_path
+              edges_to_replace[se] =
+                sp.take(p_begin) +
+                p +
+                sp.drop(p_begin + old_path.size)
             end
-            edges_to_replace.each do |re, rp|
-              @shortest_paths[re] = rp
-            end
+          end
+          edges_to_replace.each do |re, rp|
+            @shortest_paths[re] = rp
           end
         end
       end
