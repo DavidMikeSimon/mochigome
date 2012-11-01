@@ -23,7 +23,11 @@ module Mochigome
     # Take an expression and return a Set of all models it references
     def expr_models(e)
       r = Set.new
-      [:expr, :left, :right].each do |m|
+      if e.is_a?(Array)
+        e.each{|sub_e| r += expr_models(sub_e)}
+        return r
+      end
+      [:expr, :left, :right, :expressions].each do |m|
         r += expr_models(e.send(m)) if e.respond_to?(m)
       end
       if e.respond_to?(:relation)

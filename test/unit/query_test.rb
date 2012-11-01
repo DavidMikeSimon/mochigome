@@ -457,6 +457,21 @@ describe Mochigome::Query do
       (data_node/0/0)['Gross'].to_f.to_s
   end
 
+  it "shows aggregate data for mid-layer-tree models with no leaf model results" do
+    q = Mochigome::Query.new(
+      [Product, Category],
+      :aggregate_sources => {
+        [:report, Product] => [Sale]
+      }
+    )
+    dn = q.run
+    assert_equal 5, dn.children.size
+    assert_equal "Product A", (dn/0).name
+    assert_equal "Product E", (dn/4).name
+    assert_empty (dn/4).children
+    assert_equal 1, (dn/4)["Sales count"]
+  end
+
   it "can do conditional counts" do
     q = Mochigome::Query.new(
       [Category],

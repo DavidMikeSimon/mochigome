@@ -37,6 +37,7 @@ module Mochigome
         aggregate_sources = as_hash
       end
 
+      agg_only_lines = []
       aggregate_sources.each do |path, aggs|
         models_path = path.drop(1) # Remove the :report symbol at the start
         tgt_line = @lines.find do |line|
@@ -47,8 +48,23 @@ module Mochigome
         end
         aggs.each do |a|
           tgt_line.add_aggregate_source(models_path.size, a)
+          if tgt_line.layer_path != models_path
+            # FIXME Copy&paste from add_aggregate_source
+            if a.is_a?(Array) then
+              focus_model = a.select{|e| e.is_a?(Class)}.first
+              data_model = a.select{|e| e.is_a?(Class)}.last
+            else
+              focus_model = data_model = a
+            end
+
+            line = QueryLine.new(models_path, access_filter)
+            line.ids_rel.join_on_path_thru([focus_model, data_model])
+            line.ids_rel.apply_condition data_model.arel_primary_key.not_eq(nil)
+            agg_only_lines << line
+          end
         end
       end
+      @lines += agg_only_lines
     end
 
     def run(cond = nil)
