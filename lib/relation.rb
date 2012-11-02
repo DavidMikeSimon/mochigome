@@ -52,7 +52,7 @@ module Mochigome
       end
 
       raise QueryError.new("No path to #{model} from #{@models.map(&:name).inspect}") unless best_path
-      join_on_path best_path, "Best path to model #{model}"
+      join_on_path best_path, "Best path to model #{model.name}"
 
       # Also use the conditions of any other unique path
       # TODO: Write a test that requires the below code to work
@@ -60,7 +60,7 @@ module Mochigome
         extra_path = @model_graph.path_thru([n, model])
         if extra_path
           unless best_path.all?{|m| extra_path.include?(m)}
-            join_on_path extra_path, "Additional path to model #{model}"
+            join_on_path extra_path, "Additional path to model #{model.name}"
           end
         end
       end
@@ -128,8 +128,8 @@ module Mochigome
           h = func.call(m)
           h.delete(:join_paths).try :each do |path|
             # FIXME: Eventually we need to support joins that
-            # double back, if only for CanCan stuff, so get rid of this
-            # uniq junk.
+            # double back, if only for CanCan stuff, so we'll need to
+            # get rid of this uniq call or else do some kind of aliasing.
             join_on_path_thru path.uniq, "Access filter for #{m.name}"
           end
           if h[:condition]

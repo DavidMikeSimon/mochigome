@@ -58,7 +58,10 @@ module Mochigome
             end
 
             line = QueryLine.new(models_path, access_filter)
-            line.ids_rel.join_on_path_thru([focus_model, data_model])
+            line.ids_rel.join_on_path_thru(
+              [focus_model, data_model],
+              "Agg chk path for F #{focus_model.name} D #{data_model.name}"
+            )
             line.ids_rel.apply_condition data_model.arel_primary_key.not_eq(nil)
             agg_only_lines << line
           end
